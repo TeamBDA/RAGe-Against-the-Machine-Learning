@@ -3,13 +3,15 @@ Big Data Analytics (BDA) team project repository
 
 A project pipeline needs to be built with the following:
 
-  Record short spoken statements from different team members.
-  Transcribe the speech with an audio model, such as Vosk.
-  Correct the transcript with an AI option, for example Gemini API, local Ollama, or another model.
-  Save the results in a CSV dataset.
-  Enrich your data with Python.
-  Validate the dataset before analysis.
-  Produce basic speaking analytics.
+  <ul>
+  <li>Record short spoken statements from different team members.</li>
+    <li>Transcribe the speech with an audio model, such as Vosk.</li>
+    <li>Correct the transcript with an AI option, for example Gemini API, local Ollama, or another model.</li>
+    <li>Save the results in a CSV dataset.</li>
+    <li>Enrich your data with Python.</li>
+    <li>Validate the dataset before analysis.</li>
+    <li>Produce basic speaking analytics.</li>
+  </ul>
 
 See link to Project Spec: https://github.com/warestack/bda/tree/main/team-project
 
