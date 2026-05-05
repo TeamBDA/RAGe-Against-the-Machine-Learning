@@ -3,12 +3,12 @@ Big Data Analytics (BDA) team project repository
 
 Possible dir structure:
 <ul>
-<ol>>------Project</ol 
-<ol>&nbsp;&nbsp;--------Models (VOSK)</ol>
-<ol>&nbsp;&nbsp;--------Recording </ol>
-<ol>&nbsp;&nbsp;>--------Docs</ol
+<ol>>------Project</ol>
+<ol>&nbsp;&nbsp;>--------Models (VOSK)</ol>
+<ol>&nbsp;&nbsp;>--------Recording </ol>
+<ol>&nbsp;&nbsp;>--------Docs</ol>
 <ol>&nbsp;&nbsp;>--------Analytics</ol>
-<ol>Python files (general)</ol>
+<ol>>Python files (general)</ol>
 </ul>
 
 A project pipeline needs to be built with the following:
