@@ -1,6 +1,13 @@
 # BDA-Team
 Big Data Analytics (BDA) team project repository
 
+Possible dir structure:
+------Project 
+--------Models (VOSK)
+--------Recording 
+--------Docs
+--------Analytics
+
 A project pipeline needs to be built with the following:
 
   <ul>
