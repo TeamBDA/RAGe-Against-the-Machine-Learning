@@ -1,4 +1,4 @@
-# BDA-Team
+# BDA-Team: RAGe Against the Machine Learning
 Big Data Analytics (BDA) team project repository
 
 Possible dir structure:
