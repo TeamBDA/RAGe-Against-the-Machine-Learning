@@ -1,0 +1,24 @@
+name: GitHub Notifier for Teams
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: GitHub Notifier for Teams
+        uses: pablovelascoedisa/github-notifications-teams-action@848ce862f236fb176868594d15ca734032f2ac3e
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          webhook-url: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          title: "New push to repository"
+          message: "A new commit was pushed to the repository."
+          color: "00AAFF"
