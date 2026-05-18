@@ -17,8 +17,8 @@ jobs:
       - name: GitHub Notifier for Teams
         uses: pablovelascoedisa/github-notifications-teams-action@848ce862f236fb176868594d15ca734032f2ac3e
         with:
-          github-token: ${{ secrets.NOTIFICATION_TOKEN }}
-          webhook-url: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          teamsSecret: ${{ secrets.TEAMS_WEBHOOK_URL }}
           title: "New issue updated in repository"
-          message: "A new issue was updated in the repository."
-          color: "00AAFF"
+          body: "A new issue was updated in the repository."
+          show_git_footer: "true"
+          show_git_status: "true"
