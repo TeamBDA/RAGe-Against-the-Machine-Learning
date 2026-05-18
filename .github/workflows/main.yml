@@ -13,10 +13,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: GitHub Notifier for Teams
-        uses: pablovelascoedisa/github-notifications-teams-action@848ce862f236fb176868594d15ca734032f2ac3e
+        uses: pablovelascoedisa/github-notifications-teams-action@ec6295fd158b9b777f9290f743a8aaca1120321d
         with:
           teamsSecret: ${{ secrets.TEAMS_WEBHOOK_URL }}
-          title: "New issue updated in repository"
-          body: "A new issue was updated in the repository."
+          title: "Issue Notification"
+          body: "An issue event occurred."
           show_git_footer: "true"
           show_git_status: "true"
