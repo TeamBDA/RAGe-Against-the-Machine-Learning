@@ -1,10 +1,8 @@
 name: GitHub Notifier for Teams
 
 on:
-  push:
-    branches:
-      - main
-      - master
+  issues:
+    types: [opened, edited, reopened]
 
 jobs:
   notify:
