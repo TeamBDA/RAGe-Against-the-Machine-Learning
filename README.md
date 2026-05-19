@@ -6,8 +6,10 @@ Possible dir structure:
 <ol>>------Project</ol>
 <ol>&nbsp;&nbsp;>--------Models (VOSK)</ol>
 <ol>&nbsp;&nbsp;>--------Recording </ol>
+<ol>&nbsp;&nbsp;>--------Transcription</ol>
 <ol>&nbsp;&nbsp;>--------Docs</ol>
 <ol>&nbsp;&nbsp;>--------Analytics</ol>
+  
 <ol>>Python files (general)</ol>
 </ul>
 
