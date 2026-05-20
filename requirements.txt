@@ -1,0 +1,18 @@
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Prequisites: For VOSK
+# WAV files (PCM 16-bit, 16kHz) using a tool like FFmpeg
+# make sure you have up-to-date pip and python3 versions:
+# Python version: 3.5-3.9
+# pip version: 20.3 and newer.
+# Upgrade python and pip if needed. Then install vosk on Linux/Mac from pip:
+# pip3 install vosk #
+# diaraization section:
+# use VOSK see: alphacep/vosk-api#405
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+vosk # Sound and audio recording (the package is under models >)
+soundfile # Transcription: reads/writes
+sounddevice # Captures audio
+pydub # process audio
+numpy # used for numerical manipulation
+pandas # charts
+ffmpeg-python # handling mpeg or conversion of video sound files if required
