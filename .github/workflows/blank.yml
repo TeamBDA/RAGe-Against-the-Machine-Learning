@@ -1,0 +1,19 @@
+name: Commit Message Check and Validation
+
+on: [push, pull_request]
+
+jobs:
+  commit_message_check:
+    name: Commit Message Check and Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate commit messages
+        run: |
+          messages=$(git log --format=%s ${{ github.event.before }}..${{ github.sha }})
+          if [ -z "$messages" ]; then
+            echo "Commit message cannot be empty, add a brief description of what you worked on...thanks"
+            exit 1
+          fi
