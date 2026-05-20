@@ -9,6 +9,7 @@
 # diaraization section:
 # use VOSK see: alphacep/vosk-api#405
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+uv # python package manager
 vosk # Sound and audio recording (the package is under models >)
 soundfile # Transcription: reads/writes
 sounddevice # Captures audio
