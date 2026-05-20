@@ -1,0 +1,22 @@
+name: GitHub Notifier for Teams
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: GitHub Notifier for Teams
+        uses: pablovelascoedisa/github-notifications-teams-action@V1.1.5
+        with:
+          teamsSecret: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          title: "Issue Notification"
+          body: "An issue event occurred."
+          show_git_footer: "true"
+          show_git_status: "true"
