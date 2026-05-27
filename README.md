@@ -40,3 +40,7 @@ VOSK speech software: <br/><br/>
 VOSK Install: https://alphacephei.com/vosk/install
 <br/>
 VOSK model versions: https://alphacephei.com/vosk/models
+
+
+'This package requires ffmpeg to convert audio files into wav format. This can be installed with the command:
+winget install -e --id Gyan.FFmpeg --exact
