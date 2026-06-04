@@ -20,13 +20,17 @@
 # ── END Info for error handling and validation check functions──────────────────────────────────────────────────────
 import os
 import csv
+from turtledemo.clock import current_day
 import pandas as pd
 import datetime
+from docx import Document, table
 
 # ── Project Path Setup ────────────────────────────────────────────────────────────────
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR           = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TRANSCRIPTIONS_DIR = os.path.join(BASE_DIR, "data")
-CSV_FILE = os.path.join(TRANSCRIPTIONS_DIR, "_test.csv")
+REPORT_DIR         = os.path.join(BASE_DIR, "documents")
+REPORT_FILE        = os.path.join(REPORT_DIR, f"csvreport_{datetime.date.today()}.docx")
+CSV_FILE           = os.path.join(TRANSCRIPTIONS_DIR, "transcriptions - vosk_0.15.csv")
 
 # ── Info for error handling and validation check functions─────────────────────────────
 # Define a CSV dictionary to re-use for col names
@@ -37,10 +41,22 @@ csvdict={
          'question':'question_flag'
 }
 
+"""Generates report from CSV file."""
+# Create a docx (Word) doc for reporting
+reportdoc = Document()
+reportdoc.add_heading(f"Validation Check Report for file {datetime.date.today()}", level=1)
+# Create a table with 1 header and all rows and columns
+table       = reportdoc.add_table(rows=1, cols=1)
+table.style = "Table Grid"
+hdr         = table.rows[0].cells
+hdr[0].text = "Error Description"
+
 def get_validation_msgs(success, message):
     """Prints a structured validation message."""
     status = "VALIDATION SUCCESS" if success else "VALIDATION FAILED"
-    print(f"[{status}] {message}")
+    fullmsg= f"[{status}] {message}"
+    print(fullmsg)
+    return fullmsg
 
 def get_dtype_checks(csv_file):
     """Data type validation logic."""
@@ -60,7 +76,9 @@ def get_dtype_checks(csv_file):
         cols_int = ['num_words', 'speech_rate_wps', 'speaker_turn_id']
         col_bool = 'question_flag'
 
-        #print(f"Col names and data types:\n{readcsv.dtypes}")
+        # Add filename to report
+        row               = table.add_row()
+        row.cells[0].text = csv_file
 
         # Integer validation
         for col in cols_int:
@@ -70,12 +88,21 @@ def get_dtype_checks(csv_file):
 
                 sval = str(val).strip()
                 if sval == "":
-                    errors.append(f"Missing integer at row {current_row}, column {col}")
+                    msg               = f"Invalid integer at row {current_row}, column {col}"
+                    fullmsg           = get_validation_msgs(False, msg)
+                    errors.append(fullmsg)
+                    row               = table.add_row()
+                    row.cells[0].text = fullmsg
+
                     continue
                 try:
                     ival = int(sval)
                 except:
-                    errors.append(f"Invalid integer '{sval}' at row {current_row}, column {col}")
+                    msg               = f"Invalid integer at row {current_row}, column {col}"
+                    fullmsg           = get_validation_msgs(False, msg)
+                    errors.append(fullmsg)
+                    row               = table.add_row()
+                    row.cells[0].text = fullmsg
                     continue
 
                 if ival <= 0:
@@ -97,7 +124,11 @@ def get_dtype_checks(csv_file):
                 validated_bools.append(False)
                 continue
             else:
-                errors.append(f"Invalid boolean '{val}' at row {current_row}, column {col_bool}")
+                msg               = f"Invalid boolean '{val}' at row {current_row}, column {col_bool}"
+                fullmsg           = get_validation_msgs(False, msg)
+                errors.append(fullmsg)
+                row               = table.add_row()
+                row.cells[0].text = fullmsg
                 validated_bools.append(None)
                 continue
             print(f"[OK] Row {current_row}: question_flag = {bval}")
@@ -107,9 +138,11 @@ def get_dtype_checks(csv_file):
 
         if errors:
             #join all errs into 1 unified msg output
-            msg = "\n[VALIDATION FAILED] Data validation failed:\n"+ "\n".join(errors)
-            get_validation_msgs(False, msg)
-            return
+            msg               = "\n[VALIDATION FAILED] Data validation failed:\n"+ "\n".join(errors)
+            fullmsg           = get_validation_msgs(False, msg)
+            errors.append(fullmsg)
+            row               = table.add_row()
+            row.cells[0].text = fullmsg
 
         else:
             print("\n[VALIDATION SUCCESS] Data validation passed.")
@@ -125,7 +158,10 @@ def get_dtype_checks(csv_file):
             if current_row is not None:
                 msg += f", row={current_row}"
             msg += ")"
-        get_validation_msgs(False, msg)
+        fullmsg           = get_validation_msgs(False, msg)
+        errors.append(fullmsg)
+        row               = table.add_row()
+        row.cells[0].text = fullmsg
 
 def get_csv_checks(csv_file):
     """Validates CSV structure, empties, and row count."""
@@ -158,17 +194,31 @@ def get_csv_checks(csv_file):
         print(f"There are {rowlength} data rows in the CSV file.")
 
         if rowlength >= 25:
-            get_validation_msgs(True, f"Row count ({rowlength}) is valid (25 or more).")
+            msg               = f"Row count ({rowlength}) is valid (25 or more)."
+            fullmsg           = get_validation_msgs(True, msg)
+            row               = table.add_row()
+            row.cells[0].text = fullmsg
         else:
-            get_validation_msgs(False, f"Row count ({rowlength}) is below the minimum required (25).")
+            msg               = f"Row count ({rowlength}) is below the minimum required (25)."
+            fullmsg           = get_validation_msgs(False, msg)
+            row               = table.add_row()
+            row.cells[0].text = fullmsg
 
     except pd.errors.EmptyDataError:
-        get_validation_msgs(False, "The CSV file is empty or has a malformed header.")
+        msg                   = "The CSV file is empty or has a malformed header."
+        fullmsg               = get_validation_msgs(False, msg)
+        row                   = table.add_row()
+        row.cells[0].text     = fullmsg
     except FileNotFoundError:
-        get_validation_msgs(False, f"File not found at: {csv_file}")
+        msg                   =  f"File not found at: {csv_file}"
+        fullmsg               = get_validation_msgs(False, msg)
+        row                   = table.add_row()
+        row.cells[0].text     = fullmsg
     except Exception as e:
-        get_validation_msgs(False, f"An unexpected parsing error occurred: {str(e)}")
-
+        msg                   = f"An unexpected parsing error occurred: {str(e)}"
+        fullmsg               = get_validation_msgs(False, msg)
+        row                   = table.add_row()
+        row.cells[0].text     = fullmsg
     return rowlength
 
 
@@ -179,7 +229,10 @@ def get_timestamp_checks(csv_file):
         idx = 0
 
         if 'timestamp' not in readcsv.columns:
-            get_validation_msgs(False, f"A timestamp column could not be found at row {idx}")
+            msg               =  f"A timestamp column could not be found at row {idx}"
+            fullmsg           = get_validation_msgs(False, msg)
+            row               = table.add_row()
+            row.cells[0].text = fullmsg
             return
 
         readcsv['timestamp'] = pd.to_datetime(
@@ -193,7 +246,10 @@ def get_timestamp_checks(csv_file):
         if not invalid_ts.empty:
             for idx in invalid_ts.index:
                 print(f"[INVALID] Row {idx + 2}: timestamp → '{readcsv.loc[idx, 'timestamp']}'")
-            get_validation_msgs(False, "Timestamp validation failed.")
+            msg               =  "Timestamp validation failed."
+            fullmsg           = get_validation_msgs(False, msg)
+            row               = table.add_row()
+            row.cells[0].text = fullmsg
             return
 
         print("All timestamps are valid.")
@@ -204,10 +260,15 @@ def get_timestamp_checks(csv_file):
         print(f"Timestamp value {formatted}")
 
     except pd.errors.EmptyDataError:
-        get_validation_msgs(False, "The CSV file is empty.")
+        msg               = "The CSV file is empty."
+        fullmsg           = get_validation_msgs(False, msg)
+        row               = table.add_row()
+        row.cells[0].text = fullmsg
     except Exception as e:
-        get_validation_msgs(False, f"Timestamp validation error: {str(e)}")
-
+        msg               = f"Timestamp validation error: {str(e)}"
+        fullmsg           = get_validation_msgs(False, msg)
+        row               = table.add_row()
+        row.cells[0].text = fullmsg
 
 # ── Use for testing validation/error handling functions───────────────────────────────
 if __name__ == "__main__":
@@ -216,3 +277,4 @@ if __name__ == "__main__":
     get_csv_checks(CSV_FILE)
     get_dtype_checks(CSV_FILE)
     get_timestamp_checks(CSV_FILE)
+    reportdoc.save(REPORT_FILE)
