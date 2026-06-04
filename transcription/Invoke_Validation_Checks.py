@@ -19,72 +19,111 @@
 #Validation failed/Validation check completed successfully
 # ── END Info for error handling and validation check functions──────────────────────────────────────────────────────
 import os
+import csv
 import pandas as pd
 import datetime
+import itertools
 
 # ── Project Path Setup ────────────────────────────────────────────────────────────────
-# Determine project root (folder above this script)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# Path to the /data directory
 TRANSCRIPTIONS_DIR = os.path.join(BASE_DIR, "data")
-
-# Full path to your CSV file
-CSV_FILE = os.path.join(TRANSCRIPTIONS_DIR, "transcriptions - vosk_0.15.csv")
+CSV_FILE = os.path.join(TRANSCRIPTIONS_DIR, "_test.csv")
 
 # ── Info for error handling and validation check functions─────────────────────────────
 
 def get_validation_msgs(success, message):
     """Prints a structured validation message."""
-    status = "VALIDATION SUCCESS" if success else "VALIDATION FAILURE"
+    status = "VALIDATION SUCCESS" if success else "VALIDATION FAILED"
     print(f"[{status}] {message}")
 
 def get_dtype_checks(csv_file):
     """Data type validation logic."""
+    # Arr to collect all errors
+    errors      = []
+    current_col = None
+    current_row = None
+
     try:
+        # Load CSV normally (no converters)
         readcsv = pd.read_csv(
             csv_file,
             usecols=['num_words', 'speech_rate_wps', 'speaker_turn_id', 'question_flag'],
             header=0
         )
 
-        colsarr = ['num_words', 'speech_rate_wps', 'speaker_turn_id']
-        colbool = 'question_flag'
+        cols_int = ['num_words', 'speech_rate_wps', 'speaker_turn_id']
+        col_bool = 'question_flag'
 
-        print(f"Col names and data types {readcsv.dtypes}")
+        #print(f"Col names and data types:\n{readcsv.dtypes}")
 
-        # Numeric validation
-        for col in colsarr:
-            num_mask = pd.to_numeric(readcsv[col], errors='coerce')
-            for idx, numeric_val in num_mask.items():
-                value = readcsv[col].iloc[idx]
+        # Integer validation
+        for col in cols_int:
+            current_col = col
+            for idx, val in readcsv[col].items():
+                current_row = idx + 2  # +2 for header row
 
-                if pd.isna(numeric_val):
-                    print(f"[INVALID] Row {idx + 2}: {col} is missing")
+                sval = str(val).strip()
+                if sval == "":
+                    errors.append(f"Missing integer at row {current_row}, column {col}")
+                    continue
+                try:
+                    ival = int(sval)
+                except:
+                    errors.append(f"Invalid integer '{sval}' at row {current_row}, column {col}")
                     continue
 
-                if numeric_val <= 0:
-                    print(f"[INVALID] Row {idx + 2}: {col} must be > 0 → '{value}'")
+                if ival <= 0:
+                    print(f"[INVALID] Row {current_row}: {col} must be > 0 → '{ival}'")
                 else:
-                    print(f"[OK] Row {idx + 2}: {col} = {numeric_val}")
+                    print(f"[OK] Row {current_row}: {col} = {ival}")
 
         # Boolean validation
-        for idx, bool_val in readcsv[colbool].items():
-            val_str = str(bool_val).strip().lower()
-            if val_str not in ["true", "false"]:
-                print(f"[INVALID] Row {idx + 2}: question_flag must be TRUE/FALSE → '{bool_val}'")
+        validated_bools = []  # store validated values separately
+        current_col     = col_bool
+        for idx, val in readcsv[col_bool].items():
+            current_row = idx + 2
+
+            sval = str(val).strip().lower()
+            if sval in ("true", "1", "yes"):
+                validated_bools.append(True)
+                continue
+            elif sval in ("false", "0", "no"):
+                validated_bools.append(False)
+                continue
             else:
-                print(f"[OK] Row {idx + 2}: question_flag = {val_str}")
+                errors.append(f"Invalid boolean '{val}' at row {current_row}, column {col_bool}")
+                validated_bools.append(None)
+                continue
+            print(f"[OK] Row {current_row}: question_flag = {bval}")
 
-    except pd.errors.DtypeWarning:
-        get_validation_msgs(False, "The CSV file column is using an incorrect data type.")
+            # Replace string with real bool
+            readcsv.at[idx, col_bool] = bval
+
+        if errors:
+            #join all errs into 1 unified msg output
+            msg = "\n[VALIDATION FAILED] Data validation failed:\n"+ "\n".join(errors)
+            get_validation_msgs(False, msg)
+            return
+
+        else:
+            print("\n[VALIDATION SUCCESS] Data validation passed.")
+            print(readcsv.dtypes)
+
+        print("\n[VALIDATION SUCCESS] All data types are correct.")
+        print(readcsv.dtypes)
+
     except Exception as e:
-        get_validation_msgs(False, f"Column not found {str(e)}")
-
+        msg = f"Validation error: {e}"
+        if current_col is not None:
+            msg += f" (column={current_col}"
+            if current_row is not None:
+                msg += f", row={current_row}"
+            msg += ")"
+        get_validation_msgs(False, msg)
 
 def get_csv_checks(csv_file):
     """Validates CSV structure, empties, and row count."""
-    rowlength     = None
+    rowlength = None
     empties_found = False
 
     try:
@@ -95,7 +134,9 @@ def get_csv_checks(csv_file):
             na_values=["", " ", "  "]
         )
 
-        readcsv = readcsv.apply(lambda col: col.map(lambda x: x.strip() if isinstance(x, str) else x))
+        readcsv = readcsv.apply(
+            lambda col: col.map(lambda x: x.strip() if isinstance(x, str) else x)
+        )
 
         empty_cells = pd.isna(readcsv)
         row_indices, col_indices = empty_cells.to_numpy().nonzero()
@@ -124,13 +165,15 @@ def get_csv_checks(csv_file):
 
     return rowlength
 
+
 def get_timestamp_checks(csv_file):
     """Timestamp validation logic."""
     try:
         readcsv = pd.read_csv(csv_file, header=0)
+        idx = 0
 
         if 'timestamp' not in readcsv.columns:
-            get_validation_msgs(False, "A timestamp column could not be found")
+            get_validation_msgs(False, f"A timestamp column could not be found at row {idx}")
             return
 
         readcsv['timestamp'] = pd.to_datetime(
@@ -157,7 +200,8 @@ def get_timestamp_checks(csv_file):
     except pd.errors.EmptyDataError:
         get_validation_msgs(False, "The CSV file is empty.")
     except Exception as e:
-        get_validation_msgs(False, f"Column not found {str(e)}")
+        get_validation_msgs(False, f"Timestamp validation error: {str(e)}")
+
 
 # ── Use for testing validation/error handling functions───────────────────────────────
 if __name__ == "__main__":
@@ -166,4 +210,3 @@ if __name__ == "__main__":
     get_csv_checks(CSV_FILE)
     get_dtype_checks(CSV_FILE)
     get_timestamp_checks(CSV_FILE)
-# ── END Use for testing validation/error handling functions───────────────────────────
