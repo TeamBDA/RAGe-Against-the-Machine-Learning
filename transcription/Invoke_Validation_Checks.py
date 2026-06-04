@@ -22,7 +22,6 @@ import os
 import csv
 import pandas as pd
 import datetime
-import itertools
 
 # ── Project Path Setup ────────────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,6 +29,13 @@ TRANSCRIPTIONS_DIR = os.path.join(BASE_DIR, "data")
 CSV_FILE = os.path.join(TRANSCRIPTIONS_DIR, "_test.csv")
 
 # ── Info for error handling and validation check functions─────────────────────────────
+# Define a CSV dictionary to re-use for col names
+csvdict={
+         'words':'num_words',
+         'speechrate':'speech_rate_wps',
+         'speakerid':'speaker_turn_id',
+         'question':'question_flag'
+}
 
 def get_validation_msgs(success, message):
     """Prints a structured validation message."""
@@ -47,7 +53,7 @@ def get_dtype_checks(csv_file):
         # Load CSV normally (no converters)
         readcsv = pd.read_csv(
             csv_file,
-            usecols=['num_words', 'speech_rate_wps', 'speaker_turn_id', 'question_flag'],
+            usecols=[csvdict["words"], csvdict['speechrate'], csvdict['speakerid'], csvdict['question']],
             header=0
         )
 
