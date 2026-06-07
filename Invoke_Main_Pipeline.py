@@ -23,6 +23,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from models.Speech2Text import main
 from transcription.Invoke_Validation_Checks import get_csv_checks, get_dtype_checks, get_timestamp_checks
 from transcription.correct_transcription import correct_text
+from analytics.enrichments import load_data, add_question_flag,add_num_words,add_text_size_chars, add_speech_rate, add_speaker_turn_id(df)
 from analytics.Metrics import total_words_num, top_speaker, bot_speaker, speakers_total_time, meeting_total_time, average_time_per_speaker,average_speech_rate
 
 # ── Project Path Setup ────────────────────────────────────────────────────────────────
