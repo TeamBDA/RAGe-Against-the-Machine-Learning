@@ -17,3 +17,5 @@ pydub # process audio
 numpy # used for numerical manipulation
 pandas # charts
 ffmpeg-python # handling mpeg or conversion of video sound files if required
+python-docx # docx for generating reports
+scikit-learn #scikit for pipeline
