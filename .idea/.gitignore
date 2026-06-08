@@ -11,3 +11,5 @@
 idea/
 venv/
 /*.zip
+/group_project.iml
+/misc.xml
