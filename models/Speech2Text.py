@@ -7,7 +7,8 @@ import tempfile
 from vosk import Model, KaldiRecognizer
 
 # ── Config ────────────────────────────────────────────────────────────────────
-FFMPEG_PATH = r"C:\Users\anton\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1.1-full_build\bin\ffmpeg.exe"
+# You can run on your PC "where ffmpeg" and paste path for FFMPEG above. So if you have issue with loading it from IDE, it'll be fixed
+FFMPEG_PATH = r"FFMPEG_PATH"
 BASE_DIR       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # project root
 RECORDINGS_DIR = os.path.join(BASE_DIR, "data", "recordings")
 MODEL_NAME     = "vosk-model-small-en-us-0.15"  # auto-downloaded and cached by Vosk on first run
