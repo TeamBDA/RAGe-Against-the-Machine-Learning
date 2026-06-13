@@ -17,7 +17,7 @@
 # ── END Pipeline Setup ───────────────────────────────────────────────────────────────────────────────────────────
 
 import os
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline as SKPipeline
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.base import BaseEstimator, TransformerMixin
 from models.Speech2Text import main
