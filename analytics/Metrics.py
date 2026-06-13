@@ -17,54 +17,53 @@ def read_file(filename):
 
 # Returns total amount of words per person
 # Not limited to 5 at the moment, as we have just 5 people in our team, but can be limited
-def total_words_num(filename):
+def total_words_num1(data_rows):
     stats = {}
 
-    for row in read_file(filename):
+    for row in data_rows:
         temp_speaker = row['speaker']
         current_rec_len = stats.setdefault(temp_speaker, 0)
-        stats.update({temp_speaker: len(row['transcript'].split()) + current_rec_len})
+        stats[temp_speaker] = len(row['transcript'].split()) + current_rec_len
 
     speaker = dict(sorted(stats.items(), key=lambda x: x[1], reverse=True))
     return speaker
 
-# Returns speaker with the most/least words spoken
-def ml_speaker(filename, mode):
+def total_words_num2(data_rows):
     stats = {}
-    temp_speaker = ""
-    temp_rec_len = 0
 
-    for row in read_file(filename):
+    for row in data_rows:
+        speaker = row['speaker']
+        # Split once, use twice if needed
+        word_count = len(row['transcript'].split())
+        
+        # Direct dictionary access is much faster than .update()
+        stats[speaker] = stats.get(speaker, 0) + word_count
 
-        # Temporary length(temp_rec_len) == 0 -> in case when just function starting first time and temporary length == 0, so we save first value
-        if temp_rec_len == 0:
-            temp_rec_len = len(row['transcript'].split())
-            temp_speaker = row['speaker']
+    return dict(sorted(stats.items(), key=lambda x: x[1], reverse=True))
 
-        # If temp_rec_len < len(row['transcript'].split()) -> checking if temporary length which was saved in the previous step < than current one
-        # If it's true -> we have a speaker with new highest amount of words per recording, so we need to save it in our stats dictionary
-        if mode == "most" and temp_rec_len < len(row['transcript'].split()):
-            temp_rec_len = len(row['transcript'].split())
-            temp_speaker = row['speaker']
-
-        # If temp_rec_len > len(row['transcript'].split()) -> checking if temporary length which was saved in the previous step > than current one
-        # If it's true -> we have a speaker with new lowest amount of words per recording, so we need to save it in our stats dictionary
-        elif mode == "least" and temp_rec_len > len(row['transcript'].split()):
-            temp_rec_len = len(row['transcript'].split())
-            temp_speaker = row['speaker']
-
-    # If temp_speaker not empty -> populate stats from temporary variables(name and amount of words)
-    if temp_speaker:
-        stats[temp_speaker] = temp_rec_len
-
-    return stats
+def ml_speaker(data_rows, mode):
+    # Leverage the function that already works perfectly
+    word_totals = total_words_num1(data_rows)
+    print(word_totals)
+    word_totals = total_words_num2(data_rows)
+    print(word_totals)
+    if not word_totals:
+        return {}
+        
+    # Since total_words_num2 is already sorted descending:
+    if mode == "most":
+        speaker = list(word_totals.keys())[0]
+    else:  # "least"
+        speaker = list(word_totals.keys())[-1]
+        
+    return {speaker: word_totals[speaker]}
 
 # Returns total speaking time for each person involved in the meeting in seconds
 # Not limited to 5 at the moment, as we have just 5 people in our team, but can be limited
-def speakers_total_time(filename):
+def speakers_total_time(data_rows):
     stats = {}
 
-    for row in read_file(filename):
+    for row in data_rows:
         temp_speaker = row['speaker']
         current_rec_len = stats.setdefault(temp_speaker, 0)
         stats.update({temp_speaker: round(float(row['total_speaking_time_seconds']) + current_rec_len, 2) })
@@ -73,21 +72,21 @@ def speakers_total_time(filename):
     return speaker
 
 # Returns total meeting speaking time in seconds
-def meeting_total_time(filename):
+def meeting_total_time(data_rows):
     time = 0.0
 
-    for row in read_file(filename):
+    for row in data_rows:
         time += float(row['total_speaking_time_seconds'])
 
     return round(time, 2)
 
 # Returns average speaking(recording) time per person in seconds
-def average_time_per_speaker(filename):
+def average_time_per_speaker(data_rows):
     stats = {}
     records_per_speaker = {}
 
 
-    for row in read_file(filename):
+    for row in data_rows:
         temp_speaker = row['speaker']
 
         if temp_speaker not in records_per_speaker:
@@ -107,9 +106,9 @@ def average_time_per_speaker(filename):
     return average_stats
 
 # Return average speech rate per person in seconds
-def average_speech_rate(filename):
-    stats = speakers_total_time(filename)
-    words_per_speaker = total_words_num(filename)
+def average_speech_rate(data_rows):
+    stats = speakers_total_time(data_rows)
+    words_per_speaker = total_words_num2(data_rows)
 
     average_stats = {}
 
@@ -123,11 +122,12 @@ def average_speech_rate(filename):
 # Creating metrics report using available function from this module
 def generate_report_csv(input_filename, output_filename):
     output_path = f"{TRANSCRIPTIONS_DIR}/{output_filename}"
+    data_rows = list(read_file(input_filename))
 
-    most_words = ml_speaker(input_filename, "most")
-    least_words = ml_speaker(input_filename, "least")
-    speaking_times = speakers_total_time(input_filename)
-    speech_rates = average_speech_rate(input_filename)
+    most_words = ml_speaker(data_rows, "most")
+    least_words = ml_speaker(data_rows, "least")
+    speaking_times = speakers_total_time(data_rows)
+    speech_rates = average_speech_rate(data_rows)
 
     most_words_speaker = list(most_words.keys())[0]
     most_words_count = list(most_words.values())[0]
@@ -135,7 +135,7 @@ def generate_report_csv(input_filename, output_filename):
     least_words_speaker = list(least_words.keys())[0]
     least_words_count = list(least_words.values())[0]
 
-    total_time = meeting_total_time(input_filename)
+    total_time = sum(speaking_times.values())
     average_time = round(total_time / len(speaking_times), 2)
 
     report = [
@@ -165,7 +165,5 @@ def generate_report_csv(input_filename, output_filename):
 
 ### TEST PART
 ### CAN CHECK ANY METHOD IN THIS FILE JUST USING CODE BELOW AND A NAME OF CSV FILE
-# if __name__ == '__main__':
-    # generate_report_csv("transcriptions_metrics.csv", "report.csv")
-    # test = average_speech_rate("transcriptions_metrics.csv")
-    # print(test)
+if __name__ == '__main__':
+    generate_report_csv("transcriptions_metrics.csv", "report.csv")
