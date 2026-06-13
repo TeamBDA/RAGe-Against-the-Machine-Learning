@@ -4,16 +4,8 @@
 # Step 1: Process speech
 # Step 2: Validate data
 # Step 3: Correct data use a function wrapper to fit and transform the existing LLM API call (fnc)
-# Step 4: Analyze data
-#
-#
-#
-#
-#
-#
-#
-#
-#
+# Step 4: Analytics enrichments - add new columns to the data frame with new insights (e.g., question flag, word count, char count, speech rate, speaker turn id)
+# Step 5: Analyze data - analytics functions to compute metrics (e.g., total words, speaker with most words, total time per speaker, total meeting time, average time per speaker, average speech rate)
 # ── END Pipeline Setup ───────────────────────────────────────────────────────────────────────────────────────────
 
 import os
@@ -23,8 +15,9 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from models.Speech2Text import main
 from transcription.Invoke_Validation_Checks import get_csv_checks, get_dtype_checks, get_timestamp_checks
 from transcription.correct_transcription import correct_text
-from analytics.enrichments import load_data, add_question_flag,add_num_words,add_text_size_chars, add_speech_rate, add_speaker_turn_id(df)
-from analytics.Metrics import total_words_num, top_speaker, bot_speaker, speakers_total_time, meeting_total_time, average_time_per_speaker,average_speech_rate
+from analytics.enrichments import load_data, add_question_flag,add_num_words,add_text_size_chars, add_speech_rate, add_speaker_turn_id, save_enriched_data
+from analytics.Metrics import read_file, total_words_num, ml_speaker, speakers_total_time, meeting_total_time, average_time_per_speaker, average_speech_rate, generate_report_csv
+
 
 # ── Project Path Setup ────────────────────────────────────────────────────────────────
 # Determine project root (folder above this script)
@@ -49,11 +42,19 @@ Pipeline = Pipeline([
 'check_dtype', FunctionTransformer(get_dtype_checks, validate=True),
 'check_timestamp', FunctionTransformer(get_timestamp_checks, validate=True),
 'repurpose_text', FunctionTransformer(correct_text, validate=True),
+'loaddt', FunctionTransformer(load_data, validate=True),
+'question_flag', FunctionTransformer(add_question_flag, validate=True),
+'add_words', FunctionTransformer(add_num_words, validate=True),
+'add_chars', FunctionTransformer(add_text_size_chars, validate=True),
+'add_speech', FunctionTransformer(add_speech_rate, validate=True),
+'add_speaker_turn', FunctionTransformer(add_speaker_turn_id, validate=True),
+'save_data', FunctionTransformer(save_enriched_data, validate=True),
+'fileread', FunctionTransformer(read_file, validate=True),
 'total_words', FunctionTransformer(total_words_num, validate=True),
-'check_top_speaker', FunctionTransformer(top_speaker, validate=True),
-'check_bot_speaker', FunctionTransformer(bot_speaker, validate=True),
+'speaker', FunctionTransformer(ml_speaker, validate=True),
 'check_speak_total_time', FunctionTransformer(speakers_total_time, validate=True),
 'check_meeting_total_time', FunctionTransformer(meeting_total_time, validate=True),
 'compute_speak_avg_time', FunctionTransformer(average_time_per_speaker, validate=True),
-'compute_rate__avg_time', FunctionTransformer(average_speech_rate, validate=True)
+'compute_rate_avg_time', FunctionTransformer(average_speech_rate, validate=True),
+'generate_report', FunctionTransformer(generate_report_csv, validate=True)
 ])
