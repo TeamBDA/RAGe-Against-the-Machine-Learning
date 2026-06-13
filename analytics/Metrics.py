@@ -71,15 +71,6 @@ def speakers_total_time(data_rows):
     speaker = dict(sorted(stats.items(), key=lambda x: x[1], reverse=True))
     return speaker
 
-# Returns total meeting speaking time in seconds
-def meeting_total_time(data_rows):
-    time = 0.0
-
-    for row in data_rows:
-        time += float(row['total_speaking_time_seconds'])
-
-    return round(time, 2)
-
 # Returns average speaking(recording) time per person in seconds
 def average_time_per_speaker(data_rows):
     stats = {}
