@@ -5,29 +5,30 @@ import datetime
 from docx import Document
 from sklearn import pipeline
 from sklearn.utils import validation
+from functools import partial
 
 # ── Project Path Setup ──────────────────────────────────────────────────────────────────
 BASE_DIR           = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TRANSCRIPTIONS_DIR = os.path.join(BASE_DIR, "data")
 REPORT_DIR         = os.path.join(BASE_DIR, "documents")
 REPORT_FILE        = os.path.join(REPORT_DIR, f"csvreport_{datetime.date.today()}.docx")
-CSV_FILE           = os.path.join(TRANSCRIPTIONS_DIR, "transcriptions - vosk_0.15.csv")
+CSV_FILE           = os.path.join(TRANSCRIPTIONS_DIR, "enriched_transcripts.csv")
 # ── END Project Path Setup ───────────────────────────────────────────────────────────────
 
 PARAMS = {
-    "dtype_checks": {
-        # Load CSV normally (no converters), specify cols to retrieve
-        "cols_int": ['num_words', 'speech_rate_wps', 'speaker_turn_id'],
-        "col_bool": 'question_flag',
-        "header": 0
-    },
-    "csv_checks": {
+    "csv_read": {
         "header": 0,
         "skip_blank_lines": True,
         "na_values": ["", " ", "  "]
     },
+
+    "dtype_checks": {
+        "cols_int": ['num_words', 'speech_rate_wps', 'speaker_turn_id'],
+        "col_bool": 'question_flag'
+    },
+
     "timestamp_checks": {
-        "header": 0
+        "timestamp_col": "timestamp"
     }
 }
 
@@ -71,14 +72,13 @@ def get_dtype_checks(df, table, cols_int, col_bool):
         invalid_entries = invalid_entries[invalid_entries]
 
         # Loop through the invalid numeric entries and print out the row and column of the invalid entry for reporting
-        for idx, col, _ in invalid_entries.items():
+        for (idx, col), _ in invalid_entries.items():
            val = df.at[idx, col]
-           if invalid_masked.at[idx, col]:
-                    msg = f"Invalid numeric value '{val}' at column {col}"
-                    fullmsg = get_validation_msgs(False, msg)
-                    errors.append(fullmsg)
-                    new_row = table.add_row()
-                    new_row.cells[0].text = fullmsg
+           msg = f"Invalid numeric value '{val}' at column {col}"
+           fullmsg = get_validation_msgs(False, msg)
+           errors.append(fullmsg)
+           new_row = table.add_row()
+           new_row.cells[0].text = fullmsg
 
         # now deal with boolean True, false, 1,0, yes, no data type, again skip header row
         for idx, val in df[col_bool].items():
@@ -109,9 +109,6 @@ def get_dtype_checks(df, table, cols_int, col_bool):
                 row.cells[0].text = fullmsg
                 validated_bools.append(None)
                 continue
-
-        # Replace string with real bool
-        df.at[idx, col_bool] = val
 
         if errors:
             #log any errors
@@ -193,7 +190,7 @@ def get_csv_checks(df, table):
     # give us the row length
     return rowlength
 
-def get_timestamp_checks(df, table):
+def get_timestamp_checks(df, table, timestamp_col):
     """Timestamp validation logic."""
     try:
         # intialise index to 0 before we check for timestamps
@@ -271,28 +268,23 @@ if __name__ == "__main__":
 
     """Run pipeline and generate report we will move this to the main pipeline script for the project later"""
     validation_pipeline = {
-        "dtype_checks": get_dtype_checks,
+        "dtype_checks": partial(get_dtype_checks,
+                                cols_int=PARAMS["dtype_checks"]["cols_int"], 
+                                col_bool=PARAMS["dtype_checks"]["col_bool"]),
         "csv_checks": get_csv_checks,
-        "timestamp_checks": get_timestamp_checks
+        "timestamp_checks": partial(get_timestamp_checks,
+                                timestamp_col=PARAMS["timestamp_checks"]["timestamp_col"])
     }
 
     """Run read file exactly once within main by referencing different param set per function"""
     try:
       # Build unified read parameters
-      READ_PARAMS = {
-      "header": 0,
-      "skip_blank_lines": True,
-      "na_values": ["", " ", "  "],
-      "usecols": PARAMS["dtype_checks"]["usecols"]  # all needed columns
-      }
-
+      READ_PARAMS = PARAMS["csv_read"]
       df = pd.read_csv(CSV_FILE, **READ_PARAMS)
 
       '''Run all functions on df'''
       for name, func in validation_pipeline.items():
         func(df, table)
-        """Adding table param"""
-        validation_functions(df, table)
 
     except TypeError as e:
            print (f"[{PARAMS}] [FAILED]. Invalid parameter configuration error: {str(e)}")
