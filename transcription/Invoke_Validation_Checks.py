@@ -12,18 +12,13 @@ TRANSCRIPTIONS_DIR = os.path.join(BASE_DIR, "data")
 REPORT_DIR         = os.path.join(BASE_DIR, "documents")
 REPORT_FILE        = os.path.join(REPORT_DIR, f"csvreport_{datetime.date.today()}.docx")
 CSV_FILE           = os.path.join(TRANSCRIPTIONS_DIR, "transcriptions - vosk_0.15.csv")
-
-# ── Define a CSV dictionary to re-use for col names and parameter sets for read.csv calls─
-CSVDICT = {
-         'words':'num_words',
-         'speechrate':'speech_rate_wps',
-         'speakerid':'speaker_turn_id',
-         'question':'question_flag'
-}
+# ── END Project Path Setup ───────────────────────────────────────────────────────────────
 
 PARAMS = {
     "dtype_checks": {
-        "usecols": [CSVDICT['words'], CSVDICT['speechrate'], CSVDICT['speakerid'], CSVDICT['question']],
+        # Load CSV normally (no converters), specify cols to retrieve
+        "cols_int": ['num_words', 'speech_rate_wps', 'speaker_turn_id'],
+        "col_bool": 'question_flag',
         "header": 0
     },
     "csv_checks": {
@@ -43,76 +38,57 @@ def get_validation_msgs(success, message):
     print(fullmsg)
     return fullmsg
 
-def get_dtype_checks(df):
+def log_error(table, msg):
+    fullmsg = get_validation_msgs(False, msg)
+    row = table.add_row()
+    row.cells[0].text = fullmsg
+
+def get_dtype_checks(df, table, cols_int, col_bool):
     """Data type validation logic."""
     # Arrs to collect all errors and a separate array to collect boolean data type errors to keep separated
     errors      = []
     validated_bools = []
-    # Initialise row and col to none to cleanly capture numbering as we loop thru csv
-    current_col = None
-    current_row = None
 
     try:
-        # Load CSV normally (no converters), specify cols to retrieve
-        cols_int = ['num_words', 'speech_rate_wps', 'speaker_turn_id']
-        col_bool = 'question_flag'
 
         print(f"Data types for the columns are currently: {df.dtypes}")
 
-        # Integer/float numeric validation
         for col in cols_int:
-            current_col = col
-            for idx, val in df[col].items():
-                current_row = idx + 2  # +2 for header row skip
-                sval = str(val).strip()
-                num_val = None
+            if col not in df.columns:
+                msg = f"Missing expected numeric column: {col}"
+                fullmsg = get_validation_msgs(False, msg)
+                row = table.add_row()
+                row.cells[0].text = fullmsg
+                errors.append(fullmsg)
+                continue
 
-                # Captures where its empty
-                if sval == "":
-                    msg = f"Invalid number - integer or float at row {current_row}, column {col}"
+        # Integer/float numeric validation in few lines as possible by using pandas to conert to numeric and identify where its not a number or less than or equal to 0, then we can loop through the invalids and print out the row and column of the invalid entry for reporting
+        converted = df[cols_int].apply(pd.to_numeric, errors='coerce')
+        invalid_masked = converted.isna() | (converted <= 0)
+
+        # stack the masked invalid entries to avoid looping thru entire df
+        invalid_entries = invalid_masked.stack()
+        invalid_entries = invalid_entries[invalid_entries]
+
+        # Loop through the invalid numeric entries and print out the row and column of the invalid entry for reporting
+        for idx, col, _ in invalid_entries.items():
+           val = df.at[idx, col]
+           if invalid_masked.at[idx, col]:
+                    msg = f"Invalid numeric value '{val}' at column {col}"
                     fullmsg = get_validation_msgs(False, msg)
                     errors.append(fullmsg)
-                    row = table.add_row()
-                    row.cells[0].text = fullmsg
-                    continue
-                # try/catch to look for float64 data type first if not look for an integer data type
-                try:
-                    num_val = float(sval)
-
-                    if num_val.is_integer():
-                            num_val = int(num_val)
-
-                    # Deal with negative values that may exist in csv and throw exception if found
-                    if num_val <= 0:
-                            print(f"[INVALID] Row {current_row}: {col} must be > 0 → '{num_val}'")
-                            msg = f"Invalid integer at row {current_row}, column {col}"
-                            fullmsg = get_validation_msgs(False, msg)
-                            errors.append(fullmsg)
-                            row = table.add_row()
-                            row.cells[0].text = fullmsg
-                            continue
-                    # Finally print ok if the entry is a valid data type
-                    else:
-                            print(f"[OK] Row {current_row}: {col} = {num_val}")
-
-                # aggregate of errors we use to loop and validate for all possible exceptions
-                except (ValueError, TypeError):
-                        msg = f"Invalid integer at row {current_row}, column {col}"
-                        fullmsg = get_validation_msgs(False, msg)
-                        errors.append(fullmsg)
-                        continue
+                    new_row = table.add_row()
+                    new_row.cells[0].text = fullmsg
 
         # now deal with boolean True, false, 1,0, yes, no data type, again skip header row
-        current_col     = col_bool
         for idx, val in df[col_bool].items():
-            current_row = idx + 2
 
             sval = str(val).strip().lower()
             if sval in ("true", "1", "yes"):
                 # Set boolean variable as True here as its is valid to track it
                 bval = True
                 validated_bools.append(True)
-                print(f"[OK] Row {current_row}: question_flag = {val}")
+                print(f"[OK] Col {col_bool}: question_flag = {val}")
                 # Replace string with real bool
                 df.at[idx, col_bool] = bval
                 continue
@@ -120,13 +96,13 @@ def get_dtype_checks(df):
                 # Set variable as False here for tracking
                 bval = False
                 validated_bools.append(False)
-                print(f"[OK] Row {current_row}: question_flag = {val}")
+                print(f"[OK] Column {col_bool}: question_flag = {val}")
                 # Replace string with real bool
                 df.at[idx, col_bool] = bval
                 continue
             else:
                 # Any other outcome for the boolean data type should throw an exception, and append all exceptions found
-                msg = f"Invalid boolean '{val}' at row {current_row}, column {col_bool}"
+                msg = f"Invalid boolean '{val}' at column {col_bool}"
                 fullmsg = get_validation_msgs(False, msg)
                 errors.append(fullmsg)
                 row = table.add_row()
@@ -134,15 +110,12 @@ def get_dtype_checks(df):
                 validated_bools.append(None)
                 continue
 
-            # Replace string with real bool
-            df.at[idx, col_bool] = val
+        # Replace string with real bool
+        df.at[idx, col_bool] = val
 
         if errors:
-            #join all data type errs into 1 unified message for reporting
-            msg = "\n[VALIDATION FAILED] Data validation failed:\n"+ "\n".join(errors)
-            fullmsg = get_validation_msgs(False, msg)
-            row = table.add_row()
-            row.cells[0].text = fullmsg
+            #log any errors
+            log_error(table, "[VALIDATION FAILED] Data type validation failed.")
 
         else:
             # Return validation correct of all intended data met the data types requirements in file
@@ -151,17 +124,12 @@ def get_dtype_checks(df):
     # exception to identify any exceptions that occur while running thru csv, and append to all errors
     except Exception as e:
         msg = f"Validation error: {e}"
-        if current_col is not None:
-            msg += f" (column={current_col}"
-            if current_row is not None:
-                msg += f", row={current_row}"
-            msg += ")"
         fullmsg           = get_validation_msgs(False, msg)
         errors.append(fullmsg)
         row               = table.add_row()
         row.cells[0].text = fullmsg
 
-def get_csv_checks(df):
+def get_csv_checks(df, table):
     """Validates CSV structure, empties, and row count."""
     # Intiailise row count to none initially
     rowlength = None
@@ -212,7 +180,7 @@ def get_csv_checks(df):
         row.cells[0].text = fullmsg
     # or file is not present
     except FileNotFoundError:
-        msg =  f"File not found at: {csv_file}"
+        msg =  f"File not found at: {CSV_FILE}"
         fullmsg = get_validation_msgs(False, msg)
         row = table.add_row()
         row.cells[0].text = fullmsg
@@ -225,7 +193,7 @@ def get_csv_checks(df):
     # give us the row length
     return rowlength
 
-def get_timestamp_checks(df):
+def get_timestamp_checks(df, table):
     """Timestamp validation logic."""
     try:
         # intialise index to 0 before we check for timestamps
@@ -295,7 +263,7 @@ if __name__ == "__main__":
     # Add filename to report
     reportdoc.add_heading(f"Validation Checks Report on {datetime.date.today()} \n for file @: \n  {CSV_FILE}")
 
-    # Create a table with 1 header and all rows and columns
+    # Create a table with 1 header and all rows and columns for the error report generated
     table = reportdoc.add_table(rows=1, cols=1)
     table.style = "Table Grid"
     hdr = table.rows[0].cells
@@ -309,16 +277,27 @@ if __name__ == "__main__":
     }
 
     """Run read file exactly once within main by referencing different param set per function"""
-    for params_name, params_dict in PARAMS.items():
-        try:
-            df = pd.read_csv(CSV_FILE, **params_dict)
-            validation_functions = validation_pipeline[params_name]
-            validation_functions(df)
+    try:
+      # Build unified read parameters
+      READ_PARAMS = {
+      "header": 0,
+      "skip_blank_lines": True,
+      "na_values": ["", " ", "  "],
+      "usecols": PARAMS["dtype_checks"]["usecols"]  # all needed columns
+      }
 
-        except TypeError as e:
-           print (f"[{params_name.upper()}] [FAILED]. Invalid parameter configuration error: {str(e)}")
-        except Exception as e:
-           print (f"[{params_name.upper()}] [VALIDATION FAILED]. Error: {str(e)}")
+      df = pd.read_csv(CSV_FILE, **READ_PARAMS)
+
+      '''Run all functions on df'''
+      for name, func in validation_pipeline.items():
+        func(df, table)
+        """Adding table param"""
+        validation_functions(df, table)
+
+    except TypeError as e:
+           print (f"[{PARAMS}] [FAILED]. Invalid parameter configuration error: {str(e)}")
+    except Exception as e:
+           print (f"[{PARAMS}] [VALIDATION FAILED]. Error: {str(e)}")
 
     # Save the final report
     reportdoc.save(REPORT_FILE)
