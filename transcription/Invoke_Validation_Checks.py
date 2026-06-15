@@ -3,9 +3,8 @@ import os
 import pandas as pd
 import datetime
 from docx import Document
-from sklearn import pipeline
-from sklearn.utils import validation
 from functools import partial
+from pandas import errors
 
 # ── Project Path Setup ──────────────────────────────────────────────────────────────────
 BASE_DIR           = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -42,66 +41,84 @@ def get_validation_msgs(success, message):
 def log_error(table, msg):
     fullmsg = get_validation_msgs(False, msg)
     row = table.add_row()
-    row.cells[0].text = fullmsg
+    if row.cells:
+        row.cells[0].text = str(fullmsg)
+    return fullmsg
+
+def log_success(table, msg):
+    fullmsg = get_validation_msgs(True, msg)
+    row = table.add_row()
+    if row.cells:
+        row.cells[0].text = str(fullmsg)
+    return fullmsg
 
 def get_dtype_checks(df, table, cols_int, col_bool):
     """Data type validation logic."""
     # Arrs to collect all errors and a separate array to collect boolean data type errors to keep separated
     errors      = []
+    validated_ints = []
     validated_bools = []
+    numeric_ok_cols = []
 
     try:
 
         print(f"Data types for the columns are currently: \n {df.dtypes}")
 
         for col in cols_int:
-            if col not in df.columns:
-                msg = f"Missing expected numeric column: {col}"
+            if not pd.api.types.is_numeric_dtype(df[col]):
+                col_num = df.columns.get_loc(col)+1  # Get the column index for the missing numeric column
+                msg = f"Missing expected numeric column: {col} at column number {col_num} instead it is {df[col].dtype}"
                 fullmsg = log_error(table, msg)             
                 errors.append(fullmsg)
-                continue
+            else:
+                # If the column is numeric, add it to the list of valid numeric columns   
+                numeric_ok_cols.append(col)
 
-        # Integer/float numeric validation in few lines as possible by using pandas to conert to numeric and identify where its not a number or less than or equal to 0, then we can loop through the invalids and print out the row and column of the invalid entry for reporting
-        converted = df[cols_int].apply(pd.to_numeric, errors='coerce')
-        invalid_masked = converted.isna() | (converted <= 0)
+        # Now use if column is numeric to proceed with validation
+        if numeric_ok_cols:
+            # Integer/float numeric validation in few lines as possible by using pandas to conert to numeric and identify where its not a number or less than or equal to 0, then we can loop through the invalids and print out the row and column of the invalid entry for reporting
+            converted = df[cols_int].apply(pd.to_numeric, errors='coerce')
+        
+            invalid_masked = converted.isna() | (converted <= 0)
 
-        # stack the masked invalid entries to avoid looping thru entire df
-        invalid_entries = invalid_masked.stack()
-        invalid_entries = invalid_entries[invalid_entries]
+            # stack the masked invalid entries to avoid looping thru entire df
+            invalid_entries = invalid_masked.stack()
+            invalid_entries = invalid_entries[invalid_entries]
 
-        # Loop through the invalid numeric entries and print out the row and column of the invalid entry for reporting
-        for (idx, col), _ in invalid_entries.items():
-           val = df.at[idx, col]
-           msg = f"Invalid numeric value '{val}' at column {col} and {idx + 2} row (1-based index)"
-           fullmsg = log_error(table, msg)             
-           errors.append(fullmsg)
+            # stack the valid entries to avoid looping thru entire df
+            validated_ints = (converted.where(~invalid_masked).stack().tolist())  # Append the valid numeric value or None if invalid
 
-        vectorised = (
+            # Loop through the invalid numeric entries and print out the row and column of the invalid entry for reporting
+            for (idx, col), _ in invalid_entries.items():
+                val = df.at[idx, col]
+                msg = f"Invalid numeric value '{val}' at column {col} and row {idx + 2}"
+                fullmsg = log_error(table, msg)             
+                errors.append(fullmsg)
+
+                if(pd.isna(val) or val <= 0):
+                    validated_ints.append(None)
+                else:
+                    validated_ints.append(int(converted.at[idx, col]))
+
+                vectorised = (
                       df[col_bool]
                       .astype(str)
                       .str.strip()
                       .str.lower()
-        )
+                )
 
-        df[col_bool] = vectorised.isin(["true", "1", "yes"])
+        valid_true = vectorised.isin(["true", "1", "yes"])
+        valid_false = vectorised.isin(["false", "0", "no"])
+        invalid_bool_mask = ~(valid_true | valid_false)
+
+        df[col_bool] = valid_true
 
         # now deal with boolean True, false, 1,0, yes, no data type, again skip header row
-        for idx, sval in vectorised.items():
-            sval = str(val).strip().lower()
-            if sval in ("true", "1", "yes"):
-                # Set boolean variable as True
-                print(f"[OK] Column {col_bool}: question_flag = {df.at[idx, col_bool]}")        
-                continue
-            elif sval in ("false", "0", "no"):
-                # Set variable as False
-                print(f"[OK] Column {col_bool}: question_flag = {df.at[idx, col_bool]}")
-                continue
-            else:
+        for idx in invalid_bool_mask[invalid_bool_mask].index:
                 # Any other outcome for the boolean data type should throw an exception, and append all exceptions found
-                msg = f"Invalid boolean '{val}' at column {col_bool}"
-                fullmsg = log_error(table, msg)             
-                errors.append(fullmsg)
-                validated_bools.append(None)
+                val = df.at[idx, col_bool]  # Define val before using it in the error message
+                msg = f"Invalid boolean '{val}' at column {col_bool}"         
+                errors.append(log_error(table, msg))
                 continue
 
         if errors:
@@ -117,6 +134,9 @@ def get_dtype_checks(df, table, cols_int, col_bool):
         msg = f"Validation error: {e}"
         fullmsg = log_error(table, msg)             
         errors.append(fullmsg)
+    
+    return errors, validated_ints, validated_bools
+
 
 def get_csv_checks(df, table):
     """Validates CSV structure, empties, and row count."""
@@ -150,8 +170,8 @@ def get_csv_checks(df, table):
         # find if there are more than the expected no of rows
         if rowlength >= 25:
             msg = f"Row count ({rowlength}) is valid (25 or more)."
-            fullmsg = log_error(table, msg)             
-            errors.append(fullmsg)
+            fullmsg = log_success(table, msg)             
+            
         # capture where there are less than the no of expected rows
         else:
             msg = f"Row count ({rowlength}) is below the minimum required (25)."
@@ -262,7 +282,7 @@ if __name__ == "__main__":
     try:
       # Build unified read parameters
       READ_PARAMS = PARAMS["csv_read"]
-      df = pd.read_csv(CSV_FILE, **READ_PARAMS)
+      df = pd.read_csv(CSV_FILE, **READ_PARAMS)  # Read all data as string to handle type validation in functions
 
       '''Run all functions on df'''
       for name, func in validation_pipeline.items():
