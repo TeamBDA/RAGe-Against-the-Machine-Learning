@@ -17,3 +17,4 @@ pydub # process audio
 numpy # used for numerical manipulation
 pandas # charts
 ffmpeg-python # handling mpeg or conversion of video sound files if required
+google-genai # for using Gemini API to correct transcripts
