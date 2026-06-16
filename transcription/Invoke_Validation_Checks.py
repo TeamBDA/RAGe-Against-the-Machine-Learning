@@ -4,7 +4,6 @@ import pandas as pd
 import datetime
 from docx import Document
 from functools import partial
-from pandas import errors
 
 # ── Project Path Setup ──────────────────────────────────────────────────────────────────
 BASE_DIR           = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
