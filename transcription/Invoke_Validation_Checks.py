@@ -66,11 +66,19 @@ def get_dtype_checks(df, table, cols_int, col_bool):
 
         '''Using pandas to check if the expected numeric columns are actually numeric, and if not log an error for each column that is not numeric, and if it is numeric add it to a list of valid numeric columns to proceed with validation. This way we can avoid trying to validate non-numeric columns and just log the error for the missing numeric column.'''
         for col in cols_int:
+            # Check if column is missing
+            if col not in df.columns:
+             msg = f"CRITICAL MISSING COLUMN: The required numeric column '{col}' is missing from the CSV file."
+             fullmsg = log_error(table, msg)             
+             errors.append(fullmsg)
+             continue # Skip to the next column
+
             if not pd.api.types.is_numeric_dtype(df[col]):
                 col_num = df.columns.get_loc(col)+1  # Get the column index for the missing numeric column
                 msg = f"Missing expected numeric column: {col} at column number {col_num} instead it is {df[col].dtype}"
                 fullmsg = log_error(table, msg)             
                 errors.append(fullmsg)
+                
             else:
                 # If the column is numeric, add it to the list of valid numeric columns   
                 numeric_ok_cols.append(col)
@@ -86,21 +94,12 @@ def get_dtype_checks(df, table, cols_int, col_bool):
             invalid_entries = invalid_masked.stack()
             invalid_entries = invalid_entries[invalid_entries]
 
-            # stack the valid entries to avoid looping thru entire df
-            validated_ints = (converted.where(~invalid_masked).stack().tolist())  # Append the valid numeric value or None if invalid
-
             # Loop through the invalid numeric entries and print out the row and column of the invalid entry for reporting
             for (idx, col), _ in invalid_entries.items():
                 val = df.at[idx, col]
                 msg = f"Invalid numeric value '{val}' at column {col} and row {idx + 2}"
                 fullmsg = log_error(table, msg)             
                 errors.append(fullmsg)
-                '''Now we have a list of valid numeric columns, we can proceed with the boolean validation for the expected boolean column, but only if the column is present in the file, otherwise log an error for missing expected boolean column'''    
-                if(pd.isna(val) or val <= 0):
-                    validated_ints.append(None)
-                    '''Any other outcome for the numeric data type should throw an exception, and append all exceptions found, but we have already captured the invalid numeric entries above, so we can just continue with the loop here'''
-                else:
-                    validated_ints.append(int(converted.at[idx, col]))
 
             '''Vectorised boolean validation for the expected boolean column, but only if the column is present in the file, otherwise log an error for missing expected boolean column'''
             vectorised = df[col_bool].astype(str).str.strip().str.lower()
@@ -150,7 +149,7 @@ def get_csv_checks(df, table):
         empty_cells = pd.isna(df)
         row_indices, col_indices = empty_cells.to_numpy().nonzero()
 
-        # If there are row indices to traverse
+        # If there are row indices to traverse       
         if len(row_indices) > 0:
             for row, col in zip(row_indices, col_indices):
                 msg = f"\n[VALIDATION FAILED] Data validation failed: Empty cell found at CSV line {row + 2}, Column index: {col}"
@@ -196,6 +195,13 @@ def get_timestamp_checks(df, table, timestamp_col):
     try:
         # intialise index to 0 before we check for timestamps
         idx = 0
+
+        # Check if column is missing
+        if timestamp_col not in df.columns:
+             msg = f"CRITICAL MISSING COLUMN: The required timestamp column '{timestamp_col}' is missing from the CSV file."
+             fullmsg = log_error(table, msg)             
+             errors.append(fullmsg)
+             return  # Cannot continue without this column
 
         # check for occurence of the timestamp column in file
         if 'timestamp' not in df.columns:
