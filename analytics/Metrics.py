@@ -114,10 +114,12 @@ def speakers_total_time(data):
 
     for row in rows:
         temp_speaker = row['speaker']
-        stats.update({temp_speaker: round(float(row['total_speaking_time_seconds']) + stats.setdefault(temp_speaker, 0), 2) })
+        # stats.update({temp_speaker: round(float(row['total_speaking_time_seconds']) + stats.setdefault(temp_speaker, 0), 2) })
+        stats[temp_speaker] = stats.get(temp_speaker, 0.0) + float(row['total_speaking_time_seconds'])
 
-    speaker = dict(sorted(stats.items(), key=lambda x: x[1], reverse=True))
-    return speaker
+    # Round to 2 decimal places and sort by value in descending order
+    final_stats = {k: round(v, 2) for k, v in stats.items()}
+    return dict(sorted(final_stats.items(), key=lambda x: x[1], reverse=True))
 
 
 def meeting_total_time(data):
@@ -146,13 +148,13 @@ def average_time_per_speaker(data):
 
     for row in rows:
         temp_speaker = row['speaker']
-
-        if temp_speaker not in records_per_speaker:
-            records_per_speaker[temp_speaker] = stats.setdefault(temp_speaker, 0)
-
-        # It works in the similar way as described in total_words_num() function
-        records_per_speaker[temp_speaker] += 1
-        stats.update({temp_speaker: float(row['total_speaking_time_seconds']) + stats.setdefault(temp_speaker, 0)})
+        seconds = float(row['total_speaking_time_seconds'])
+        
+        # Track how many times this speaker turned up
+        records_per_speaker[temp_speaker] = records_per_speaker.get(temp_speaker, 0) + 1
+        
+        # Track their cumulative seconds
+        stats[temp_speaker] = stats.get(temp_speaker, 0.0) + seconds
 
     average_stats = {}
 
@@ -205,7 +207,7 @@ def questions_per_speaker(data):
     for row in rows:
         speaker = row["speaker"]
 
-        if row["question_flag"] == "True":
+        if row["question_flag"] == True:
             stats[speaker] = stats.get(speaker, 0) + 1
 
     return dict(sorted(stats.items(), key=lambda x: x[1], reverse=True))
@@ -274,8 +276,8 @@ def generate_report_csv(data, output_filename):
 
 ### TEST PART
 ### CAN CHECK ANY METHOD IN THIS FILE JUST USING CODE BELOW AND A NAME OF CSV FILE
-# if __name__ == '__main__':
+if __name__ == '__main__':
 
-    # generate_report_csv("enriched_transcripts.csv", "report2.csv")
+    generate_report_csv("enriched_transcripts.csv", "report.csv")
     # test = average_time_per_meeting("transcriptions_metrics.csv")
     # print(test)
