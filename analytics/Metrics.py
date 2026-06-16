@@ -114,7 +114,6 @@ def speakers_total_time(data):
 
     for row in rows:
         temp_speaker = row['speaker']
-        # stats.update({temp_speaker: round(float(row['total_speaking_time_seconds']) + stats.setdefault(temp_speaker, 0), 2) })
         stats[temp_speaker] = stats.get(temp_speaker, 0.0) + float(row['total_speaking_time_seconds'])
 
     # Round to 2 decimal places and sort by value in descending order
@@ -207,7 +206,7 @@ def questions_per_speaker(data):
     for row in rows:
         speaker = row["speaker"]
 
-        if row["question_flag"] == True:
+        if row["question_flag"] is True:
             stats[speaker] = stats.get(speaker, 0) + 1
 
     return dict(sorted(stats.items(), key=lambda x: x[1], reverse=True))
