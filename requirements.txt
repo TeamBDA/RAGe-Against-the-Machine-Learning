@@ -17,6 +17,4 @@ pydub # process audio
 numpy # used for numerical manipulation
 pandas # charts
 ffmpeg-python # handling mpeg or conversion of video sound files if required
-python-docx # docx for generating reports
-scikit-learn #scikit for pipeline
-python-partial # used for partial calling of parameters to be updated in a FNC, python-partial/
+google-genai # for using Gemini API to correct transcripts

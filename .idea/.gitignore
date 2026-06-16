@@ -10,6 +10,3 @@
 /dataSources.local.xml
 idea/
 venv/
-/*.zip
-/group_project.iml
-/misc.xml

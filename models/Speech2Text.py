@@ -7,6 +7,8 @@ import tempfile
 from vosk import Model, KaldiRecognizer
 
 # ── Config ────────────────────────────────────────────────────────────────────
+# You can run on your PC "where ffmpeg" and paste path for FFMPEG above. So if you have issue with loading it from IDE, it'll be fixed
+FFMPEG_PATH = r"FFMPEG_PATH"
 BASE_DIR       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # project root
 RECORDINGS_DIR = os.path.join(BASE_DIR, "data", "recordings")
 MODEL_NAME     = "vosk-model-small-en-us-0.15"  # auto-downloaded and cached by Vosk on first run
@@ -14,6 +16,14 @@ OUTPUT_CSV     = os.path.join(BASE_DIR, "data", "transcriptions.csv")
 CHUNK_SIZE     = 4000
 # ─────────────────────────────────────────────────────────────────────────────
 
+def get_wav_duration_seconds(wav_path):
+    """
+        Get duration of wav file.
+    """
+    with wave.open(wav_path, "rb") as wf:
+        frames = wf.getnframes()
+        rate = wf.getframerate()
+        return round(frames / float(rate), 2)
 
 def check_ffmpeg():
     """
@@ -22,7 +32,7 @@ def check_ffmpeg():
     letting the code fail silently later during conversion.
     """
     result = subprocess.run(
-        ["ffmpeg", "-version"],
+        [FFMPEG_PATH, "-version"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
@@ -61,7 +71,7 @@ def parse_filename(filename):
 def convert_to_wav(m4a_path, tmp_wav_path):
     """Converts m4a to 16kHz mono 16-bit WAV using ffmpeg."""
     cmd = [
-        "ffmpeg", "-y",             # overwrite output if exists
+        FFMPEG_PATH, "-y",             # overwrite output if exists
         "-i", m4a_path,
         "-ar", "16000",             # sample rate
         "-ac", "1",                 # mono
@@ -132,28 +142,42 @@ def main():
             if not convert_to_wav(m4a_path, tmp_wav):
                 print(f"    [ERROR] ffmpeg conversion failed for {filename}")
                 rows.append({
-                    "filename":   filename,
-                    "speaker":    speaker,
-                    "index":      index,
-                    "transcript": "ERROR: conversion failed"
+                    "filename": filename,
+                    "speaker": speaker,
+                    "index": index,
+                    "transcript": "ERROR: conversion failed",
+                    "total_speaking_time_seconds": 0
                 })
                 continue
+
+            # Get total speaking/audio time
+            duration_seconds = get_wav_duration_seconds(tmp_wav)
 
             # Transcribe
             transcript = transcribe_wav(tmp_wav, model)
             print(f"    Transcript: {transcript[:80]}{'...' if len(transcript) > 80 else ''}")
 
             rows.append({
-                "filename":   filename,
-                "speaker":    speaker,
-                "index":      index,
-                "transcript": transcript
+                "filename": filename,
+                "speaker": speaker,
+                "index": index,
+                "transcript": transcript,
+                "total_speaking_time_seconds": duration_seconds
             })
 
     # Write CSV
     os.makedirs(os.path.dirname(OUTPUT_CSV), exist_ok=True)
     with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["filename", "speaker", "index", "transcript"])
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "filename",
+                "speaker",
+                "index",
+                "transcript",
+                "total_speaking_time_seconds"
+            ]
+        )
         writer.writeheader()
         writer.writerows(rows)
 
