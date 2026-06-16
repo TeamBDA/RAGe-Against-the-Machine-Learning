@@ -10,7 +10,7 @@ BASE_DIR           = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TRANSCRIPTIONS_DIR = os.path.join(BASE_DIR, "data")
 REPORT_DIR         = os.path.join(BASE_DIR, "documents")
 REPORT_FILE        = os.path.join(REPORT_DIR, f"csvreport_{datetime.date.today()}.docx")
-CSV_FILE           = os.path.join(TRANSCRIPTIONS_DIR, "enriched_transcripts.csv")
+CSV_FILE           = os.path.join(TRANSCRIPTIONS_DIR, "corrected_transcripts.csv")
 # ── END Project Path Setup ───────────────────────────────────────────────────────────────
 
 PARAMS = {
@@ -55,8 +55,6 @@ def get_dtype_checks(df, table, cols_int, col_bool):
     """Data type validation logic."""
     # Arrs to collect all errors and a separate array to collect boolean data type errors to keep separated
     errors      = []
-    validated_ints = []
-    validated_bools = []
     numeric_ok_cols = []
 
     try:
@@ -64,6 +62,13 @@ def get_dtype_checks(df, table, cols_int, col_bool):
         print(f"Data types for the columns are currently: \n {df.dtypes}")
 
         for col in cols_int:
+            # Check if column is missing
+            if col not in df.columns:
+                msg = f"CRITICAL MISSING COLUMN: The required numeric column '{col}' is missing from the CSV file."
+                fullmsg = log_error(table, msg)             
+                errors.append(fullmsg)
+                continue # Skip to the next column
+
             if not pd.api.types.is_numeric_dtype(df[col]):
                 col_num = df.columns.get_loc(col)+1  # Get the column index for the missing numeric column
                 msg = f"Missing expected numeric column: {col} at column number {col_num} instead it is {df[col].dtype}"
@@ -84,8 +89,6 @@ def get_dtype_checks(df, table, cols_int, col_bool):
             invalid_entries = invalid_masked.stack()
             invalid_entries = invalid_entries[invalid_entries]
 
-            # stack the valid entries to avoid looping thru entire df
-            validated_ints = (converted.where(~invalid_masked).stack().tolist())  # Append the valid numeric value or None if invalid
 
             # Loop through the invalid numeric entries and print out the row and column of the invalid entry for reporting
             for (idx, col), _ in invalid_entries.items():
@@ -94,35 +97,35 @@ def get_dtype_checks(df, table, cols_int, col_bool):
                 fullmsg = log_error(table, msg)             
                 errors.append(fullmsg)
 
-                if(pd.isna(val) or val <= 0):
-                    validated_ints.append(None)
-                else:
-                    validated_ints.append(int(converted.at[idx, col]))
+        # Check if the boolean column exists before trying to manipulate it
+        if col_bool not in df.columns:
+            msg = f"CRITICAL MISSING COLUMN: The required boolean column '{col_bool}' is missing from the CSV file structure."
+            errors.append(log_error(table, msg))
+        else:
+            vectorised = (
+                    df[col_bool]
+                    .astype(str)
+                    .str.strip()
+                    .str.lower()
+            )
 
-                vectorised = (
-                      df[col_bool]
-                      .astype(str)
-                      .str.strip()
-                      .str.lower()
-                )
+            valid_true = vectorised.isin(["true", "1", "yes"])
+            valid_false = vectorised.isin(["false", "0", "no"])
+            invalid_bool_mask = ~(valid_true | valid_false)
 
-        valid_true = vectorised.isin(["true", "1", "yes"])
-        valid_false = vectorised.isin(["false", "0", "no"])
-        invalid_bool_mask = ~(valid_true | valid_false)
+            df[col_bool] = valid_true
 
-        df[col_bool] = valid_true
-
-        # now deal with boolean True, false, 1,0, yes, no data type, again skip header row
-        for idx in invalid_bool_mask[invalid_bool_mask].index:
-                # Any other outcome for the boolean data type should throw an exception, and append all exceptions found
-                val = df.at[idx, col_bool]  # Define val before using it in the error message
-                msg = f"Invalid boolean '{val}' at column {col_bool}"         
-                errors.append(log_error(table, msg))
-                continue
+            # now deal with boolean True, false, 1,0, yes, no data type, again skip header row
+            for idx in invalid_bool_mask[invalid_bool_mask].index:
+                    # Any other outcome for the boolean data type should throw an exception, and append all exceptions found
+                    val = vectorised.at[idx]  # Define val before using it in the error message
+                    msg = f"Invalid boolean '{val}' at column {col_bool}"         
+                    errors.append(log_error(table, msg))
+                    continue
 
         if errors:
             #log any errors
-            log_error(table, "[VALIDATION FAILED] Data type validation failed.")
+            log_error(table, "Data type validation failed.")
 
         else:
             # Return validation correct of all intended data met the data types requirements in file
@@ -133,8 +136,6 @@ def get_dtype_checks(df, table, cols_int, col_bool):
         msg = f"Validation error: {e}"
         fullmsg = log_error(table, msg)             
         errors.append(fullmsg)
-    
-    return errors, validated_ints, validated_bools
 
 
 def get_csv_checks(df, table):
@@ -192,8 +193,7 @@ def get_csv_checks(df, table):
         msg = f"An unexpected parsing error occurred: {str(e)}"
         fullmsg = log_error(table, msg)             
         errors.append(fullmsg)
-    # give us the row length
-    return rowlength
+
 
 def get_timestamp_checks(df, table, timestamp_col):
     """Timestamp validation logic."""
@@ -204,7 +204,7 @@ def get_timestamp_checks(df, table, timestamp_col):
 
         # check for occurence of the timestamp column in file
         if 'timestamp' not in df.columns:
-            msg =  f"A timestamp column could not be found at row {idx}"
+            msg =  f"A timestamp column could not be found."
             fullmsg = log_error(table, msg)             
             errors.append(fullmsg)
             return
