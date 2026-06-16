@@ -10,7 +10,7 @@ BASE_DIR           = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TRANSCRIPTIONS_DIR = os.path.join(BASE_DIR, "data")
 REPORT_DIR         = os.path.join(BASE_DIR, "documents")
 REPORT_FILE        = os.path.join(REPORT_DIR, f"csvreport_{datetime.date.today()}.docx")
-CSV_FILE           = os.path.join(TRANSCRIPTIONS_DIR, "enriched_transcripts.csv")
+CSV_FILE           = os.path.join(TRANSCRIPTIONS_DIR, "corrected_transcripts.csv")
 # ── END Project Path Setup ───────────────────────────────────────────────────────────────
 
 #Parameters used for the functions below, we can expand this as we add more functions and checks, and it keeps the parameters in one place for easy reference and maintenance. We can also use this to build a config file later if we want to make it more dynamic and not have to change code to update parameters.
@@ -58,8 +58,6 @@ def get_dtype_checks(df, table, cols_int, col_bool):
     """Data type validation logic."""
     # Arrs to collect all errors and a separate array to collect boolean data type errors to keep separated
     errors      = []
-    validated_ints = []
-    validated_bools = []
     numeric_ok_cols = []
 
     try:
@@ -135,9 +133,6 @@ def get_dtype_checks(df, table, cols_int, col_bool):
             msg = f"Validation error: {e}"
             fullmsg = log_error(table, msg)             
             errors.append(fullmsg)
-    
-    return errors, validated_ints, validated_bools
-
 
 def get_csv_checks(df, table):
     """Validates CSV structure, empties, and row count."""
@@ -194,8 +189,6 @@ def get_csv_checks(df, table):
         msg = f"An unexpected parsing error occurred: {str(e)}"
         fullmsg = log_error(table, msg)             
         errors.append(fullmsg)
-    # give us the row length
-    return rowlength
 
 def get_timestamp_checks(df, table, timestamp_col):
     """Timestamp validation logic."""
