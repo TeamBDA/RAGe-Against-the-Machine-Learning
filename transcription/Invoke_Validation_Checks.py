@@ -13,6 +13,7 @@ REPORT_FILE        = os.path.join(REPORT_DIR, f"csvreport_{datetime.date.today()
 CSV_FILE           = os.path.join(TRANSCRIPTIONS_DIR, "enriched_transcripts.csv")
 # ── END Project Path Setup ───────────────────────────────────────────────────────────────
 
+#Parameters used for the functions below, we can expand this as we add more functions and checks, and it keeps the parameters in one place for easy reference and maintenance. We can also use this to build a config file later if we want to make it more dynamic and not have to change code to update parameters.
 PARAMS = {
     "csv_read": {
         "header": 0,
@@ -38,6 +39,7 @@ def get_validation_msgs(success, message):
     return fullmsg
 
 def log_error(table, msg):
+    '''Logs an error message to the report table and returns the full message. But first checks that the table has cells to avoid errors when trying to access cells of a row that may not exist.'''
     fullmsg = get_validation_msgs(False, msg)
     row = table.add_row()
     if row.cells:
@@ -45,6 +47,7 @@ def log_error(table, msg):
     return fullmsg
 
 def log_success(table, msg):
+    ''''Logs a success message to the report table and returns the full message. But first checks that the table has cells to avoid errors when trying to access cells of a row that may not exist.'''
     fullmsg = get_validation_msgs(True, msg)
     row = table.add_row()
     if row.cells:
@@ -63,6 +66,7 @@ def get_dtype_checks(df, table, cols_int, col_bool):
 
         print(f"Data types for the columns are currently: \n {df.dtypes}")
 
+        '''Using pandas to check if the expected numeric columns are actually numeric, and if not log an error for each column that is not numeric, and if it is numeric add it to a list of valid numeric columns to proceed with validation. This way we can avoid trying to validate non-numeric columns and just log the error for the missing numeric column.'''
         for col in cols_int:
             if not pd.api.types.is_numeric_dtype(df[col]):
                 col_num = df.columns.get_loc(col)+1  # Get the column index for the missing numeric column
@@ -93,46 +97,44 @@ def get_dtype_checks(df, table, cols_int, col_bool):
                 msg = f"Invalid numeric value '{val}' at column {col} and row {idx + 2}"
                 fullmsg = log_error(table, msg)             
                 errors.append(fullmsg)
-
+                '''Now we have a list of valid numeric columns, we can proceed with the boolean validation for the expected boolean column, but only if the column is present in the file, otherwise log an error for missing expected boolean column'''    
                 if(pd.isna(val) or val <= 0):
                     validated_ints.append(None)
+                    '''Any other outcome for the numeric data type should throw an exception, and append all exceptions found, but we have already captured the invalid numeric entries above, so we can just continue with the loop here'''
                 else:
                     validated_ints.append(int(converted.at[idx, col]))
 
-                vectorised = (
-                      df[col_bool]
-                      .astype(str)
-                      .str.strip()
-                      .str.lower()
-                )
+            '''Vectorised boolean validation for the expected boolean column, but only if the column is present in the file, otherwise log an error for missing expected boolean column'''
+            vectorised = df[col_bool].astype(str).str.strip().str.lower()
 
-        valid_true = vectorised.isin(["true", "1", "yes"])
-        valid_false = vectorised.isin(["false", "0", "no"])
-        invalid_bool_mask = ~(valid_true | valid_false)
+            '''Flatten the boolean validation to avoid looping through entire df, and just identify the invalid boolean entries, and log an error for each invalid boolean entry found, and append valid boolean values to a list of validated bools'''
+            valid_true = vectorised.isin(["true", "1", "yes"])
+            valid_false = vectorised.isin(["false", "0", "no"])
+            invalid_bool_mask = ~(valid_true | valid_false)
 
-        df[col_bool] = valid_true
+            df[col_bool] = valid_true
 
-        # now deal with boolean True, false, 1,0, yes, no data type, again skip header row
-        for idx in invalid_bool_mask[invalid_bool_mask].index:
+            # now deal with boolean True, false, 1,0, yes, no data type, again skip header row
+            for idx in invalid_bool_mask[invalid_bool_mask].index:
                 # Any other outcome for the boolean data type should throw an exception, and append all exceptions found
                 val = df.at[idx, col_bool]  # Define val before using it in the error message
                 msg = f"Invalid boolean '{val}' at column {col_bool}"         
                 errors.append(log_error(table, msg))
                 continue
 
-        if errors:
-            #log any errors
-            log_error(table, "[VALIDATION FAILED] Data type validation failed.")
+            if errors:
+                #log any errors
+                log_error(table, "[VALIDATION FAILED] Data type validation failed.")
 
-        else:
-            # Return validation correct of all intended data met the data types requirements in file
-            print("\n[VALIDATION SUCCESS] Data validation passed.")
+            else:
+                # Return validation correct of all intended data met the data types requirements in file
+                print("\n[VALIDATION SUCCESS] Data validation passed.")
 
     # exception to identify any exceptions that occur while running thru csv, and append to all errors
     except Exception as e:
-        msg = f"Validation error: {e}"
-        fullmsg = log_error(table, msg)             
-        errors.append(fullmsg)
+            msg = f"Validation error: {e}"
+            fullmsg = log_error(table, msg)             
+            errors.append(fullmsg)
     
     return errors, validated_ints, validated_bools
 
