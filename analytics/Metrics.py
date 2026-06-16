@@ -206,7 +206,7 @@ def questions_per_speaker(data):
     for row in rows:
         speaker = row["speaker"]
 
-        if row["question_flag"] is True:
+        if row["question_flag"]:
             stats[speaker] = stats.get(speaker, 0) + 1
 
     return dict(sorted(stats.items(), key=lambda x: x[1], reverse=True))
