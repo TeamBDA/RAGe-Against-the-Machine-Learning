@@ -6,10 +6,10 @@ Possible dir structure:
 <ol>>------Project</ol>
 <ol>src/</ol>
 <ol>&nbsp;&nbsp;>--------models/</ol>
-<ol>&nbsp;&nbsp;>--------transcription</ol>
-<ol>&nbsp;&nbsp;>--------analytics</ol>
-<ol>&nbsp;&nbsp;>--------data </ol>
-<ol>&nbsp;&nbsp;>--------utils </ol>
+<ol>&nbsp;&nbsp;>--------transcription/</ol>
+<ol>&nbsp;&nbsp;>--------analytics/</ol>
+<ol>&nbsp;&nbsp;>--------data/</ol>
+<ol>&nbsp;&nbsp;>--------utils/</ol>
 <ol>docs</ol>
 <ol>tests</ol>
 <ol>requirements.txt</ol>
