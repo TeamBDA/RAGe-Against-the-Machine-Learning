@@ -2,7 +2,7 @@ import csv
 import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # project root
-TRANSCRIPTIONS_DIR = os.path.join(BASE_DIR, "data")
+TRANSCRIPTIONS_DIR = os.path.join(BASE_DIR, "data/results")
 
 
 def read_file(filename):
@@ -276,7 +276,5 @@ def generate_report_csv(data, output_filename):
 ### TEST PART
 ### CAN CHECK ANY METHOD IN THIS FILE JUST USING CODE BELOW AND A NAME OF CSV FILE
 if __name__ == '__main__':
-
     generate_report_csv("enriched_transcripts.csv", "report.csv")
-    # test = average_time_per_meeting("transcriptions_metrics.csv")
-    # print(test)
+    print("Report generated successfully as report.csv in the data/results directory.")

@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     # Load the mock CSV file containing raw Vosk transcripts
     # utf-8-sig encoding handles hidden characters that Windows sometimes adds to files
-    df = pd.read_csv(r"./data/transcriptions - vosk_0.22-lgraph.csv", encoding="utf-8-sig")
+    df = pd.read_csv(r"./data/results/transcriptions.csv", encoding="utf-8-sig")
 
     # Ensure the corrected_transcript column exists
     if "corrected_transcript" not in df.columns:
@@ -85,5 +85,5 @@ if __name__ == "__main__":
     print(df.head(2))
 
     # Save the updated dataframe with the corrected "corrected_transcript" column to a new CSV file
-    df.to_csv(r"./data/corrected_transcripts.csv", index=False)
+    df.to_csv(r"./data/results/corrected_transcripts.csv", index=False)
     print("Done! The corrected transcripts have been saved to 'corrected_transcripts.csv'.")
