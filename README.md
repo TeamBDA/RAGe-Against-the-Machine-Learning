@@ -4,14 +4,13 @@ Big Data Analytics (BDA) team project repository
 Possible dir structure:
 <ul>
 <ol>>------Project</ol>
-<ol>src/</ol>
-<ol>&nbsp;&nbsp;>--------models/</ol>
-<ol>&nbsp;&nbsp;>--------transcription/</ol>
 <ol>&nbsp;&nbsp;>--------analytics/</ol>
 <ol>&nbsp;&nbsp;>--------data/</ol>
-<ol>&nbsp;&nbsp;>--------utils/</ol>
-<ol>docs</ol>
-<ol>tests</ol>
+<ol>&nbsp;&nbsp;>--------documents/</ol>
+<ol>&nbsp;&nbsp;>--------models/</ol>
+<ol>&nbsp;&nbsp;>--------src/</ol> <--most py files-->
+<ol>&nbsp;&nbsp;>--------tests</ol>
+<ol>&nbsp;&nbsp;>--------transcription/</ol>
 <ol>requirements.txt</ol>
 <ol>readme.md</ol>
 </ul>
