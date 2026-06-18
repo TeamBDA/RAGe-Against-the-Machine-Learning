@@ -20,6 +20,8 @@ from src.enrich_transcriptions import load_data, add_question_flag,add_num_words
 from src.validate_transcriptions import get_csv_checks, get_dtype_checks, get_timestamp_checks
 from src.calculate_metrics import read_file, get_rows, total_words_num, ml_speaker_rec, ml_speaker_t, speakers_total_time, meeting_total_time, average_time_per_speaker, average_time_per_meeting, average_speech_rate, generate_report_csv
 
+# NOTE: Pass the data through in memory rather than having to do repetitive reads
+
 # ── Project Path Setup ────────────────────────────────────────────────────────────────
 # Determine project root (folder above this script)
 BASE_DIR  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
