@@ -1,6 +1,7 @@
 # ── Pipeline Setup ───────────────────────────────────────────────────────────────────────────────────────────────
 # The pipeline is used to process all steps/tasks associated with this project
 # NOTE: For the LLM we will use a Transformer (has fit and transform), or an Estimator (has fit and predict)
+# NOTE: Pass the data through in memory rather than having to do repetitive reads
 # Step 1: Process speech
 # Step 2: Validate data
 # Step 3: Correct data use a function wrapper to fit and transform the existing LLM API call (fnc)
@@ -67,27 +68,27 @@ logger = pipeline_logger()
 
 # Define all pipeline steps to execute all functions with outputs feeding inputs (where possible)
 Pipeline = Pipeline([
-'process_speech', FunctionTransformer(main, validate=True),
-'correct_transcription', FunctionTransformer(correct_text, validate=True),
-'loaddt', FunctionTransformer(load_data, validate=True),
-'question_flag', FunctionTransformer(add_question_flag, validate=True),
-'add_words', FunctionTransformer(add_num_words, validate=True),
-'add_chars', FunctionTransformer(add_text_size_chars, validate=True),
-'add_speech', FunctionTransformer(add_speech_rate, validate=True),
-'add_speaker_turn', FunctionTransformer(add_speaker_turn_id, validate=True),
-'save_data', FunctionTransformer(save_enriched_data, validate=True),
-'check_csv', FunctionTransformer(get_csv_checks, validate=True),
-'check_dtype', FunctionTransformer(get_dtype_checks, validate=True),
-'check_timestamp', FunctionTransformer(get_timestamp_checks, validate=True),
-'fileread', FunctionTransformer(read_file, validate=True),
-'retrieve_rows', FunctionTransformer(get_rows, validate=True),
-'total_words', FunctionTransformer(total_words_num, validate=True),
-'speaker', FunctionTransformer(ml_speaker_rec, validate=True),
-'speaker_time', FunctionTransformer(ml_speaker_t, validate=True),
-'speakers total time', FunctionTransformer(speakers_total_time, validate=True),
-'check_meeting_total_time', FunctionTransformer(meeting_total_time, validate=True),
-'compute_speak_avg_time', FunctionTransformer(average_time_per_speaker, validate=True),
-'compute_speak_avg_meeting', FunctionTransformer(average_time_per_meeting, validate=True),    
-'compute_rate_avg_time', FunctionTransformer(average_speech_rate, validate=True),
-'generate_report', FunctionTransformer(generate_report_csv, validate=True)
+'process_speech', FunctionTransformer(main),
+'correct_transcription', FunctionTransformer(correct_text),
+'loaddt', FunctionTransformer(load_data),
+'question_flag', FunctionTransformer(add_question_flag),
+'add_words', FunctionTransformer(add_num_words),
+'add_chars', FunctionTransformer(add_text_size_chars),
+'add_speech', FunctionTransformer(add_speech_rate),
+'add_speaker_turn', FunctionTransformer(add_speaker_turn_id),
+'save_data', FunctionTransformer(save_enriched_data),
+'check_csv', FunctionTransformer(get_csv_checks),
+'check_dtype', FunctionTransformer(get_dtype_checks),
+'check_timestamp', FunctionTransformer(get_timestamp_checks),
+'fileread', FunctionTransformer(read_file),
+'retrieve_rows', FunctionTransformer(get_rows),
+'total_words', FunctionTransformer(total_words_num),
+'speaker', FunctionTransformer(ml_speaker_rec),
+'speaker_time', FunctionTransformer(ml_speaker_t),
+'speakers total time', FunctionTransformer(speakers_total_time),
+'check_meeting_total_time', FunctionTransformer(meeting_total_time),
+'compute_speak_avg_time', FunctionTransformer(average_time_per_speaker),
+'compute_speak_avg_meeting', FunctionTransformer(average_time_per_meeting),    
+'compute_rate_avg_time', FunctionTransformer(average_speech_rate),
+'generate_report', FunctionTransformer(generate_report_csv)
 ])
