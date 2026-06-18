@@ -8,11 +8,11 @@ from vosk import Model, KaldiRecognizer
 
 # ── Config ────────────────────────────────────────────────────────────────────
 # You can run on your PC "where ffmpeg" and paste path for FFMPEG above. So if you have issue with loading it from IDE, it'll be fixed
-FFMPEG_PATH = r"FFMPEG_PATH"
+FFMPEG_PATH = r"ffmpeg" # default assumes ffmpeg is on PATH, otherwise specify full path to ffmpeg executable here
 BASE_DIR       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # project root
 RECORDINGS_DIR = os.path.join(BASE_DIR, "data", "recordings")
 MODEL_NAME     = "vosk-model-small-en-us-0.15"  # auto-downloaded and cached by Vosk on first run
-OUTPUT_CSV     = os.path.join(BASE_DIR, "data", "transcriptions.csv")
+OUTPUT_CSV     = os.path.join(BASE_DIR, "data/results", "transcriptions.csv")
 CHUNK_SIZE     = 4000
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -58,11 +58,11 @@ def parse_filename(filename):
             break
         base = root
 
-    # Expected format: RATML-{SPEAKER}-VN{N}
+    # Expected format: VN{N}-RATML-{SPEAKER}
     parts = base.split("-")
-    if len(parts) == 3 and parts[0] == "RATML" and parts[2].startswith("VN"):
-        speaker = parts[1]
-        index = parts[2]          # e.g. "VN1"
+    if len(parts) == 3 and parts[1] == "RATML" and parts[0].startswith("VN"):
+        speaker = parts[2]
+        index = parts[0]          # e.g. "VN1"
         return speaker, index
 
     return None, None
