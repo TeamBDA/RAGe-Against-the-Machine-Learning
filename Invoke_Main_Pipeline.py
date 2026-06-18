@@ -12,12 +12,11 @@ import os
 from sklearn.pipeline import Pipeline as SKPipeline
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.base import BaseEstimator, TransformerMixin
-from models.Speech2Text import main
-from transcription.Invoke_Validation_Checks import get_csv_checks, get_dtype_checks, get_timestamp_checks
-from transcription.correct_transcription import correct_text
-from analytics.enrichments import load_data, add_question_flag,add_num_words,add_text_size_chars, add_speech_rate, add_speaker_turn_id, save_enriched_data
-from analytics.Metrics import read_file, total_words_num, ml_speaker, speakers_total_time, meeting_total_time, average_time_per_speaker, average_speech_rate, generate_report_csv
-
+from src.transcribe_recordings import main
+from src.correct_transcription import correct_text
+from src.enrich_transcriptions import load_data, add_question_flag,add_num_words,add_text_size_chars, add_speech_rate, add_speaker_turn_id, save_enriched_data
+from src.validate_transcriptions import get_csv_checks, get_dtype_checks, get_timestamp_checks
+from src.calculate_metrics import read_file, get_rows, total_words_num, ml_speaker_rec, ml_speaker_t, speakers_total_time, meeting_total_time, average_time_per_speaker, average_time_per_meeting, average_speech_rate, generate_report_csv
 
 # ── Project Path Setup ────────────────────────────────────────────────────────────────
 # Determine project root (folder above this script)
@@ -38,10 +37,7 @@ class Correction2Text(BaseEstimator, TransformerMixin):
 # Define all pipeline steps to execute all functions with outputs feeding inputs (where possible)
 Pipeline = Pipeline([
 'process_speech', FunctionTransformer(main, validate=True),
-'check_csv', FunctionTransformer(get_csv_checks, validate=True),
-'check_dtype', FunctionTransformer(get_dtype_checks, validate=True),
-'check_timestamp', FunctionTransformer(get_timestamp_checks, validate=True),
-'repurpose_text', FunctionTransformer(correct_text, validate=True),
+'correct_transcription', FunctionTransformer(correct_text, validate=True),
 'loaddt', FunctionTransformer(load_data, validate=True),
 'question_flag', FunctionTransformer(add_question_flag, validate=True),
 'add_words', FunctionTransformer(add_num_words, validate=True),
@@ -49,12 +45,18 @@ Pipeline = Pipeline([
 'add_speech', FunctionTransformer(add_speech_rate, validate=True),
 'add_speaker_turn', FunctionTransformer(add_speaker_turn_id, validate=True),
 'save_data', FunctionTransformer(save_enriched_data, validate=True),
+'check_csv', FunctionTransformer(get_csv_checks, validate=True),
+'check_dtype', FunctionTransformer(get_dtype_checks, validate=True),
+'check_timestamp', FunctionTransformer(get_timestamp_checks, validate=True),
 'fileread', FunctionTransformer(read_file, validate=True),
+'retrieve_rows', FunctionTransformer(get_rows, validate=True),
 'total_words', FunctionTransformer(total_words_num, validate=True),
-'speaker', FunctionTransformer(ml_speaker, validate=True),
-'check_speak_total_time', FunctionTransformer(speakers_total_time, validate=True),
+'speaker', FunctionTransformer(ml_speaker_rec, validate=True),
+'speaker_time', FunctionTransformer(ml_speaker_t, validate=True),
+'speakers total time', FunctionTransformer(speakers_total_time, validate=True),
 'check_meeting_total_time', FunctionTransformer(meeting_total_time, validate=True),
 'compute_speak_avg_time', FunctionTransformer(average_time_per_speaker, validate=True),
+'compute_speak_avg_meeting', FunctionTransformer(average_time_per_meeting, validate=True),    
 'compute_rate_avg_time', FunctionTransformer(average_speech_rate, validate=True),
 'generate_report', FunctionTransformer(generate_report_csv, validate=True)
 ])
