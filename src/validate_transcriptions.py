@@ -267,46 +267,52 @@ def get_timestamp_checks(df, table, timestamp_col):
         errors.append(fullmsg)
 
 # ── Use for testing validation/error handling functions───────────────────────────────
-if __name__ == "__main__":
-
+def run() -> None:
+    """
+    Pipeline entry point. Loads the saved enriched transcriptions csv, runs all
+    validation checks, and saves a dated error report .docx to documents/.
+    """
     print(f"Validating CSV file: {CSV_FILE}")
+    os.makedirs(REPORT_DIR, exist_ok=True)
 
-    """Generate report from CSV file."""
-    # Create a docx (Word) doc for reporting
     reportdoc = Document()
-    # Add filename to report
-    reportdoc.add_heading(f"Validation Checks Report on {datetime.date.today()} \n for file @: \n  {CSV_FILE}")
+    reportdoc.add_heading(
+        f"Validation Checks Report on {datetime.date.today()}\n"
+        f"for file: {CSV_FILE}"
+    )
 
-    # Create a table with 1 header and all rows and columns for the error report generated
     table = reportdoc.add_table(rows=1, cols=1)
     table.style = "Table Grid"
-    hdr = table.rows[0].cells
-    hdr[0].text = "Error Description"
+    table.rows[0].cells[0].text = "Error Description"
 
-    """Run pipeline and generate report we will move this to the main pipeline script for the project later"""
     validation_pipeline = {
-        "dtype_checks": partial(get_dtype_checks,
-                                cols_int=PARAMS["dtype_checks"]["cols_int"], 
-                                col_bool=PARAMS["dtype_checks"]["col_bool"]),
-        "csv_checks": get_csv_checks,
-        "timestamp_checks": partial(get_timestamp_checks,
-                                timestamp_col=PARAMS["timestamp_checks"]["timestamp_col"])
+        "csv_checks":   get_csv_checks,
+        "dtype_checks": partial(
+            get_dtype_checks,
+            cols_int=PARAMS["dtype_checks"]["cols_int"],
+            col_bool=PARAMS["dtype_checks"]["col_bool"]
+        ),
+        "timestamp_checks": partial(
+            get_timestamp_checks,
+            timestamp_col=PARAMS["timestamp_checks"]["timestamp_col"]
+        ),
     }
 
-    """Run read file exactly once within main by referencing different param set per function"""
     try:
-      # Build unified read parameters
-      READ_PARAMS = PARAMS["csv_read"]
-      df = pd.read_csv(CSV_FILE, **READ_PARAMS)  # Read all data as string to handle type validation in functions
+        READ_PARAMS = PARAMS["csv_read"]
+        df_validate = pd.read_csv(CSV_FILE, **READ_PARAMS)
 
-      '''Run all functions on df'''
-      for name, func in validation_pipeline.items():
-        func(df, table)
+        for func in validation_pipeline.values():
+            func(df_validate, table)
 
     except TypeError as e:
-           print (f"[{PARAMS}] [FAILED]. Invalid parameter configuration error: {str(e)}")
+        print(f"[FAILED] Invalid parameter configuration error: {str(e)}")
     except Exception as e:
-           print (f"[{PARAMS}] [VALIDATION FAILED]. Error: {str(e)}")
+        print(f"[VALIDATION FAILED] Error: {str(e)}")
 
-    # Save the final report
     reportdoc.save(REPORT_FILE)
+    print(f"✅ Error report saved to {REPORT_FILE}.")
+
+
+if __name__ == "__main__":
+    run()

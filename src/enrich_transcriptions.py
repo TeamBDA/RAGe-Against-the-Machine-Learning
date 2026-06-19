@@ -43,6 +43,24 @@ def save_enriched_data(df, output_file):
     """Save the enriched DataFrame to a new CSV file."""
     df.to_csv(output_file, index=False)
 
+def run(df: "pd.DataFrame") -> "pd.DataFrame":
+    """
+    Pipeline entry point. Accepts a corrected DataFrame, applies all
+    enrichment columns, saves enriched_transcripts.csv, and returns
+    the enriched DataFrame.
+    """
+    df = add_question_flag(df)
+    df = add_num_words(df)
+    df = add_text_size_chars(df)
+    df = add_speech_rate(df)
+    df = add_speaker_turn_id(df)
+
+    output_file = os.path.join(TRANSCRIPTIONS_DIR, "enriched_transcripts.csv")
+    save_enriched_data(df, output_file)
+    print(f"✅ Enriched data saved to {output_file}.")
+    return df
+
+
 if __name__ == "__main__":
     # Example usage
     filename = 'corrected_transcripts.csv'
@@ -50,15 +68,4 @@ if __name__ == "__main__":
         TRANSCRIPTIONS_DIR, filename,
         )
     df = load_data(file_path)
-    df = add_question_flag(df)
-    df = add_num_words(df)
-    df = add_text_size_chars(df)
-    df = add_speech_rate(df)
-    df = add_speaker_turn_id(df)
-    
-    # Save the enriched DataFrame to a new CSV file
-    output_file = os.path.join(
-        TRANSCRIPTIONS_DIR, 'enriched_transcripts.csv',
-        )
-    save_enriched_data(df, output_file)
-    print(f"Enriched data saved to {output_file}.")
+    run(df)
