@@ -1,6 +1,7 @@
 # ── Pipeline Setup ───────────────────────────────────────────────────────────────────────────────────────────────
 # The pipeline is used to process all steps/tasks associated with this project
 # NOTE: For the LLM we will use a Transformer (has fit and transform), or an Estimator (has fit and predict)
+# NOTE: Pass the data through in memory rather than having to do repetitive reads
 # Step 1: Process speech
 # Step 2: Validate data
 # Step 3: Correct data use a function wrapper to fit and transform the existing LLM API call (fnc)
