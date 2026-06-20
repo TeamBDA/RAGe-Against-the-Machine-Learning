@@ -114,8 +114,6 @@ def run() -> "pd.DataFrame":
     Pipeline entry point. Transcribes all recordings and returns results
     as a DataFrame for the next pipeline step.
     """
-    import pandas as pd
-
     check_ffmpeg()
 
     print(f"Loading VOSK model: {MODEL_NAME}")
