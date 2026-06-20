@@ -1,5 +1,7 @@
-import csv
 import os
+import csv
+import pandas as pd
+from typing import Union
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # project root
 TRANSCRIPTIONS_DIR = os.path.join(BASE_DIR, "data/results")
@@ -25,6 +27,10 @@ def get_rows(data):
     """
     if isinstance(data, str):
         return read_file(data)
+    
+    if isinstance(data, pd.DataFrame):
+        return data.to_dict(orient='records')
+    
     return data
 
 
@@ -268,13 +274,18 @@ def generate_report_csv(data, output_filename):
             "No questions detected"
         ])
 
-    with open(output_path, "w", newline="") as csvfile:
+    with open(output_path, "w", newline="", encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile)
         writer.writerows(report)
 
+def run(df_or_filename: Union[pd.DataFrame, str]) -> None:
+    """
+    Pipeline entry point. Reads enriched_transcripts.csv and writes
+    metrics_report.csv to the same data/results directory.
+    """
+    generate_report_csv(df_or_filename, "metrics_report.csv")
+    print(f"✅ Metrics report saved to {TRANSCRIPTIONS_DIR}/metrics_report.csv")
 
-### TEST PART
-### CAN CHECK ANY METHOD IN THIS FILE JUST USING CODE BELOW AND A NAME OF CSV FILE
+
 if __name__ == '__main__':
-    generate_report_csv("enriched_transcripts.csv", "report.csv")
-    print("Report generated successfully as report.csv in the data/results directory.")
+    run("enriched_transcripts.csv")

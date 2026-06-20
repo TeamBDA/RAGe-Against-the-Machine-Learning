@@ -43,46 +43,38 @@ def correct_text(client, raw_text):
     # If it fails after all 5 attempts, raise an error explaining the server situation
     raise Exception(f"Failed after {max_retries} retries for text: '{raw_text[:30]}...'. Google servers are heavily overloaded right now. Try running the script later.")
 
+def run(df: "pd.DataFrame", api_key: str) -> "pd.DataFrame":
+    """
+    Pipeline entry point. Accepts a DataFrame from transcribe_recordings,
+    adds a 'corrected_transcript' column, and returns the updated DataFrame.
+    """
+    client = genai.Client(api_key=api_key)
+    PACING_DELAY = 4.1
+
+    if "corrected_transcript" not in df.columns:
+        df["corrected_transcript"] = None
+
+    for index, row in tqdm(df.iterrows(), total=len(df), desc="Correcting Transcripts"):
+        if df.at[index, "corrected_transcript"] is not None:
+            continue
+        df.at[index, "corrected_transcript"] = correct_text(client, row["transcript"])
+        time.sleep(PACING_DELAY)
+
+    print("✅ Correction complete.")
+    return df
+
+
 if __name__ == "__main__":
 
     # Prompt the user to input their Google Gemini API key securely at runtime
     my_api_key = input("Please enter your Google Gemini API key: ")
 
-    # Initialize the client
-    client = genai.Client(api_key=my_api_key)
-
     # Load the mock CSV file containing raw Vosk transcripts
     # utf-8-sig encoding handles hidden characters that Windows sometimes adds to files
     df = pd.read_csv(r"./data/results/transcriptions.csv", encoding="utf-8-sig")
 
-    # Ensure the corrected_transcript column exists
-    if "corrected_transcript" not in df.columns:
-        df["corrected_transcript"] = None
-
-    # Adding a 0.1s buffer is best practice to avoid edge-case rate limits
-    PACING_DELAY = 4.1
-
-    for index, row in tqdm(df.iterrows(), total=len(df), desc="Correcting Transcripts"):
-        # Skip rows that have already been processed (useful if restarting a failed run)
-        if df.at[index, "corrected_transcript"] is not None:
-            continue
-            
-        raw_text = row["transcript"]
-        
-        # Call your corrected function (passing client explicitly)
-        corrected_text_result = correct_text(client, raw_text)
-        
-        # Save it back to the DataFrame
-        df.at[index, "corrected_transcript"] = corrected_text_result
-        
-        # Enforce the 15 RPM pacing limit
-        time.sleep(PACING_DELAY)
-
-    # Print the column names to prove the 'corrected_transcript' column exists
-    print("\nColumns in memory right now:", df.columns.tolist())
-
-    # Print the first two rows to see the actual data
-    print(df.head(2))
+    # Clean transcriptions
+    df = run(df, my_api_key)
 
     # Save the updated dataframe with the corrected "corrected_transcript" column to a new CSV file
     df.to_csv(r"./data/results/corrected_transcripts.csv", index=False)

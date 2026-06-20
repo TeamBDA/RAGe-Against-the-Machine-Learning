@@ -1,7 +1,7 @@
 import os
 import wave
 import json
-import csv
+import pandas as pd
 import subprocess
 import tempfile
 from vosk import Model, KaldiRecognizer
@@ -109,8 +109,11 @@ def transcribe_wav(wav_path, model):
     return " ".join(parts).strip()
 
 
-def main():
-    # Fail fast if ffmpeg is missing before we do any real work
+def run() -> "pd.DataFrame":
+    """
+    Pipeline entry point. Transcribes all recordings and returns results
+    as a DataFrame for the next pipeline step.
+    """
     check_ffmpeg()
 
     print(f"Loading VOSK model: {MODEL_NAME}")
@@ -165,24 +168,22 @@ def main():
                 "total_speaking_time_seconds": duration_seconds
             })
 
+    print(f"\n✅ Transcription complete. {len(rows)} row(s) ready.")
+    return pd.DataFrame(rows, columns=[
+        "filename", "speaker", "index", "transcript", "total_speaking_time_seconds"
+    ])
+
+
+def main():
+    """Standalone entry point — transcribes and writes CSV as before."""
+    df = run()
+
     # Write CSV
     os.makedirs(os.path.dirname(OUTPUT_CSV), exist_ok=True)
-    with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(
-            f,
-            fieldnames=[
-                "filename",
-                "speaker",
-                "index",
-                "transcript",
-                "total_speaking_time_seconds"
-            ]
-        )
-        writer.writeheader()
-        writer.writerows(rows)
+    df.to_csv(OUTPUT_CSV, index=False, encoding="utf-8")
 
     print(f"\n✅ Done! CSV saved to: {OUTPUT_CSV}")
-    print(f"   {len(rows)} row(s) written.")
+    print(f"   {len(df)} row(s) written.")
 
 
 if __name__ == "__main__":
