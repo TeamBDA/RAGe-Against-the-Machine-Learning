@@ -5,6 +5,7 @@ import csv
 import subprocess
 import tempfile
 import time #added in to capture the time taken for each transcription
+from datetime import datetime, timedelta  # added datetime and timedelta for timestamp generation
 from vosk import Model, KaldiRecognizer
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -15,6 +16,7 @@ OUTPUT_CSV     = os.path.join(BASE_DIR, "data", "transcriptions_V15.csv")
 METRICS_CSV     = os.path.join(BASE_DIR, "data", "metrics_V15.csv")  #captures the time taken for each transcription and accuracy metrics
 REFERENCE_CSV   = os.path.join(BASE_DIR, "data", "Correct_transcription.txt")   # correct transcripts for WER comparison
 CHUNK_SIZE     = 4000
+BASE_TIMESTAMP  = datetime(2026, 6, 18, 18, 0, 0)  # ← CHANGED: base timestamp for index=1 row (2026-04-28T10:00:00)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -210,70 +212,58 @@ def load_reference_transcripts(reference_csv):
  
 
 def main():
-    # ── Total runtime: start timer ────────────────────────────────────────────
-    total_start = time.time() #start timer
+    total_start = time.time()
  
     check_ffmpeg()
  
     print(f"Loading VOSK model: {MODEL_NAME}")
     model = Model(model_name=MODEL_NAME)
-
-    
-    references = load_reference_transcripts(REFERENCE_CSV) # Load reference transcripts for WER comparison (if available)
-    
-    # Collect all m4a files
+ 
+    references = load_reference_transcripts(REFERENCE_CSV)
+ 
     all_files = sorted([
         f for f in os.listdir(RECORDINGS_DIR)
         if ".m4a" in f.lower()
     ])
-
+ 
     print(f"Found {len(all_files)} recording(s). Starting transcription...\n")
-
-    rows = []       # transcription output rows
-    metrics_rows = []  # timing and accuracy metrics rows
-
+ 
+    rows         = []
+    metrics_rows = []
+ 
     with tempfile.TemporaryDirectory() as tmpdir:
         for filename in all_files:
-            m4a_path = os.path.join(RECORDINGS_DIR, filename)
+            m4a_path       = os.path.join(RECORDINGS_DIR, filename)
             speaker, index = parse_filename(filename)
-
+ 
             if not speaker:
                 print(f"  [SKIP] Could not parse filename: {filename}")
                 continue
-
+ 
             print(f"  Processing: {filename}  →  Speaker={speaker}, Index={index}")
-
-            # Convert to WAV
+ 
             tmp_wav = os.path.join(tmpdir, f"{speaker}_{index}.wav")
             if not convert_to_wav(m4a_path, tmp_wav):
                 print(f"    [ERROR] ffmpeg conversion failed for {filename}")
                 rows.append({
-                    "filename":   filename,
-                    "speaker":    speaker,
-                    "index":      index,
-                    "transcript": "ERROR: conversion failed"
+                    "filename":      filename,
+                    "timestamp":     "",         
+                    "index":         index,
+                    "speaker":          speaker,     
+                    "transcript":    "ERROR: conversion failed",
+                    "time_taken_sec": ""          
                 })
                 continue
-
-            
-             # Get the duration of the recording itself
+ 
             recording_length_s = get_wav_duration(tmp_wav)
-
-            # Per-file timer start
+ 
             file_start = time.time()
             transcript, avg_confidence, word_count = transcribe_wav(tmp_wav, model)
             file_duration = round(time.time() - file_start, 4)
-
-            # Real-Time Factor: how long VOSK took vs how long the recording was
-            # < 1.0 means VOSK processed faster than real-time
-            # > 1.0 means VOSK took longer than the recording itself
-            rtf = round(file_duration / recording_length_s, 4) if recording_length_s > 0 else 0.0
  
-            # Words transcribed per second — throughput rate for this file
+            rtf              = round(file_duration / recording_length_s, 4) if recording_length_s > 0 else 0.0
             words_per_second = round(word_count / file_duration, 4) if file_duration > 0 else 0.0
  
-            # WER against reference transcript 
-           
             ref_key = (index, speaker.lower())
             wer = None
             if ref_key in references:
@@ -281,55 +271,68 @@ def main():
             else:
                 print(f"    [WARNING] No reference found for index={index}, speaker={speaker}")
  
-            print(f"    Transcript:      {transcript[:80]}{'...' if len(transcript) > 80 else ''}")
-            print(f"    Confidence:      {avg_confidence}  |  Words: {word_count}  |  Time: {file_duration}s  |  WPS: {words_per_second}  |  WER: {wer}")
-
+            print(f"    Transcript:  {transcript[:80]}{'...' if len(transcript) > 80 else ''}")
+            print(f"    Confidence:  {avg_confidence}  |  Words: {word_count}  |  Time: {file_duration}s  |  WPS: {words_per_second}  |  WER: {wer}")
+ 
             rows.append({
-                "filename":   filename,
-                "speaker":    speaker,
-                "index":      index,
-                "transcript": transcript
+                "filename":       filename,
+                "timestamp":      "",             
+                "index":          index,
+                "speaker":           speaker,        
+                "transcript":     transcript,
+                "time_taken_sec": recording_length_s   
             })
-
+ 
             metrics_rows.append({
-                "filename":          filename,
-                "speaker":           speaker,
-                "index":             index,
-                "model":             MODEL_NAME,
-                "recording_length_s": recording_length_s,   # ← new
-                "duration_s":        file_duration,
-                "rtf":               rtf,                   # ← new
-                "word_count":        word_count,
-                "words_per_sec":     words_per_second,
-                "avg_confidence":    avg_confidence,
-                "wer":               wer if wer is not None else "N/A"
+                "filename":           filename,
+                "speaker":            speaker,
+                "index":              index,
+                "model":              MODEL_NAME,
+                "recording_length_s": recording_length_s,
+                "duration_s":         file_duration,
+                "rtf":                rtf,
+                "word_count":         word_count,
+                "words_per_sec":      words_per_second,
+                "avg_confidence":     avg_confidence,
+                "wer":                wer if wer is not None else "N/A"
             })
-
- # ── Total runtime: end timer ──────────────────────────────────────────────
+ 
     total_duration = round(time.time() - total_start, 4)
     print(f"\n  Total runtime: {total_duration}s")
  
- # ── Sort metrics by index ascending before writing ────────────────────────
+    # ── Sort both lists by index ascending ────────────────────────────────────
+    rows.sort(key=lambda r: int(r["index"]) if str(r["index"]).isdigit() else 0)  #sort rows (not just metrics) by index
     metrics_rows.sort(key=lambda r: int(r["index"]))
-
-    
+ 
+    # ── Generate timestamps ───────────────────────────────────────────────────
+    # The first row (index=1) receives BASE_TIMESTAMP.                           new timestamp generation block
+    # Each subsequent row's timestamp = previous timestamp + that row's
+    # time_taken_sec, representing when that speaker began talking relative
+    # to the start of the meeting.
+    current_timestamp = BASE_TIMESTAMP                                           
+    for row in rows:                                                             
+        row["timestamp"] = current_timestamp.strftime("%Y-%m-%dT%H:%M:%S")     #format as ISO 8601
+        if isinstance(row["time_taken_sec"], float):                             
+            current_timestamp += timedelta(seconds=row["time_taken_sec"])       #  advance clock by the recording length
+            
     # ── Write transcriptions CSV ──────────────────────────────────────────────
     os.makedirs(os.path.dirname(OUTPUT_CSV), exist_ok=True)
     with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["filename", "speaker", "index", "transcript"])
+        writer = csv.DictWriter(f, fieldnames=[                                 
+            "filename", "timestamp", "index", "speaker", "transcript", "time_taken_sec"
+        ])
         writer.writeheader()
         writer.writerows(rows)
-
-     # ── Write metrics CSV ─────────────────────────────────────────────────────
+ 
+    # ── Write metrics CSV ─────────────────────────────────────────────────────
     with open(METRICS_CSV, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=[
             "filename", "speaker", "index", "model",
-            "recording_length_s", "duration_s", "rtf",   # ← updated
+            "recording_length_s", "duration_s", "rtf",
             "word_count", "words_per_sec", "avg_confidence", "wer"
         ])
         writer.writeheader()
         writer.writerows(metrics_rows)
-        # Append a total runtime summary row at the bottom
         writer.writerow({
             "filename":       "TOTAL",
             "speaker":        "",
@@ -342,9 +345,10 @@ def main():
             "wer":            ""
         })
  
-    print(f"\n Done!")
+    print(f"\n✅ Done!")
     print(f"   Transcriptions → {OUTPUT_CSV}  ({len(rows)} row(s))")
     print(f"   Metrics        → {METRICS_CSV}")
+ 
  
 if __name__ == "__main__":
     main()
