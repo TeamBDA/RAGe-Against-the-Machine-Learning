@@ -3,20 +3,18 @@
 
 <h3>A project pipeline built with the following</h3>:
 
-  <ul>
-    <li>Takes in short spoken recordings (.m4a filetype) as input.</li>
-    <li>Transcribes the recorded speech with a Vosk audio model.</li>
-    <li>Corrects the transcript with Gemini 3.1 flash-lite.</li>
-    <li>Saves the results in a CSV dataset.</li>
-    <li>Enriches the transcriptions with Python, including:</li>
-    <li><li> - Quesiton flag (whether or not the recording includes a question).</li></li>
-    <li><li> - Number of words spoken.</li></li>
-    <li><li> - Number of characters in transcripts.</li></li>
-    <li><li> - Speech rate.</li></li>
-    <li><li> - Speaker turn ID.</li></li>
-    <li>Validates the dataset before analysis.</li>
-    <li>Produces basic metrics for transcriptions.</li>
-  </ul>
+* Takes in short spoken recordings (.m4a filetype) as input.
+* Transcribes the recorded speech with a Vosk audio model.
+* Corrects the transcript with Gemini 3.1 flash-lite.
+* Saves the results in a CSV dataset.
+* Enriches the transcriptions with Python, including:
+  * Question flag (whether or not the recording includes a question).
+  * Number of words spoken.
+  * Number of characters in transcripts.
+  * Speech rate.
+  * Speaker turn ID.
+* Validates the dataset before analysis.
+* Produces basic metrics for transcriptions.
 
 ---
 
