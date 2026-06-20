@@ -1,4 +1,7 @@
+import argparse
 import datetime
+import os
+import subprocess
 
 import transcribe_recordings
 import correct_transcriptions
@@ -6,8 +9,65 @@ import enrich_transcriptions
 import validate_transcriptions
 import calculate_metrics
 
+BASE_DIR       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # project root
+RECORDINGS_DIR = os.path.join(BASE_DIR, "data", "recordings")
 
-def main():
+
+def check_ffmpeg(ffmpeg_path: str = "ffmpeg") -> None:
+    """
+    Validates that ffmpeg is installed and accessible on PATH.
+    Exits early with a clear message if it is not found, rather than
+    letting the code fail silently later during conversion.
+    """
+    result = subprocess.run(
+        [ffmpeg_path, "-version"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+    if result.returncode != 0:
+        raise EnvironmentError(
+            "ffmpeg was not found on your PATH.\n"
+            "Please install it and ensure it is accessible before running this script.\n"
+            "See the README for installation instructions."
+        )
+
+def main():    
+    parser = argparse.ArgumentParser(
+        description="RAGe Against the Machine-Learning — Transcription Pipeline"
+    )
+    # Allow optional ffmpeg path (can be called with either -f or --ffmpeg)
+    parser.add_argument(
+        "-f", "--ffmpeg",
+        type=str,
+        default="ffmpeg",
+        help="Optional: Path to the ffmpeg executable."
+    )
+
+    # Allow optional recordings dir flag (can be called with either -d or --dir)
+    parser.add_argument(
+        "-d", "--dir",
+        type=str,
+        default=RECORDINGS_DIR,
+        help="Optional: Path to an alternative directory containing .m4a recordings."
+    )
+
+    args = parser.parse_args()
+
+    # Check ffmpeg availability before proceeding with the pipeline
+    check_ffmpeg(ffmpeg_path=args.ffmpeg)
+
+    # Collect all m4a files
+    recordings = sorted([
+        f for f in os.listdir(args.dir)
+        if ".m4a" in f.lower()
+    ])
+
+    if not recordings:
+        raise FileNotFoundError(
+            f"No .m4a recordings found in directory: {args.dir}\n"
+            "Please ensure you have recordings to transcribe."
+        )
+
     print("\n" + "=" * 62)
     print("  RAGe Against the Machine-Learning — Transcription Pipeline")
     print("=" * 62 + "\n")
@@ -19,7 +79,7 @@ def main():
 
     # Step 1: Transcribe
     print("\n── Step 1/5: Transcribing recordings ──")
-    df = transcribe_recordings.run()
+    df = transcribe_recordings.run(recordings_dir=args.dir, recordings=recordings)
 
     # Step 2: Correct
     print("\n── Step 2/5: Correcting transcriptions ──")

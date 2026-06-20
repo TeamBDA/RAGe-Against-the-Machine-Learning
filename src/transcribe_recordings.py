@@ -25,25 +25,6 @@ def get_wav_duration_seconds(wav_path):
         rate = wf.getframerate()
         return round(frames / float(rate), 2)
 
-def check_ffmpeg():
-    """
-    Validates that ffmpeg is installed and accessible on PATH.
-    Exits early with a clear message if it is not found, rather than
-    letting the code fail silently later during conversion.
-    """
-    result = subprocess.run(
-        [FFMPEG_PATH, "-version"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
-    if result.returncode != 0:
-        raise EnvironmentError(
-            "ffmpeg was not found on your PATH.\n"
-            "Please install it and ensure it is accessible before running this script.\n"
-            "See the README for installation instructions."
-        )
-
-
 def parse_filename(filename):
     """
     Extracts speaker and index from filenames like:
@@ -109,29 +90,28 @@ def transcribe_wav(wav_path, model):
     return " ".join(parts).strip()
 
 
-def run() -> "pd.DataFrame":
+def run(recordings_dir: str = RECORDINGS_DIR, recordings: list = None) -> "pd.DataFrame":
     """
     Pipeline entry point. Transcribes all recordings and returns results
     as a DataFrame for the next pipeline step.
     """
-    check_ffmpeg()
+
+    if not recordings:
+        raise FileNotFoundError(
+            f"No .m4a recordings found in directory: {recordings_dir}\n"
+            "Please ensure you have recordings to transcribe."
+        )
 
     print(f"Loading VOSK model: {MODEL_NAME}")
     model = Model(model_name=MODEL_NAME)
 
-    # Collect all m4a files
-    all_files = sorted([
-        f for f in os.listdir(RECORDINGS_DIR)
-        if ".m4a" in f.lower()
-    ])
-
-    print(f"Found {len(all_files)} recording(s). Starting transcription...\n")
+    print(f"Found {len(recordings)} recording(s). Starting transcription...\n")
 
     rows = []
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        for filename in all_files:
-            m4a_path = os.path.join(RECORDINGS_DIR, filename)
+        for filename in recordings:
+            m4a_path = os.path.join(recordings_dir, filename)
             speaker, index = parse_filename(filename)
 
             if not speaker:
