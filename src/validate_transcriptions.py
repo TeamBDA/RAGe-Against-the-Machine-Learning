@@ -131,7 +131,8 @@ def get_dtype_checks(df, table, cols_int, col_bool):
 
             # now deal with boolean True, false, 1,0, yes, no data type, again skip header row
             for idx in invalid_bool_mask[invalid_bool_mask].index:
-                # Any other outcome for the boolean data type should throw an exception, and append all exceptions found
+                # Any other outcome for the boolean data type should throw an exception,
+                # and append all exceptions found
                 val = vectorised.at[idx]  # Define val before using it in the error message
                 msg = f"Invalid boolean '{val}' at column {col_bool} and row {idx + 2}"         
                 errors.append(log_error(table, msg))
@@ -142,8 +143,16 @@ def get_dtype_checks(df, table, cols_int, col_bool):
                 log_error(table, "[VALIDATION FAILED] Data type validation failed.")
 
             else:
-                # Return validation correct of all intended data met the data types requirements in file
+                # Return validation correct of all intended data met the data types
+                # requirements in file
                 print("\n[VALIDATION SUCCESS] Data validation passed.")
+
+                # Log to the Word table
+                msg = (
+                    "Data type validation passed successfully"
+                     " (Numeric and Boolean types are valid)."
+                )
+                log_success(table, msg)
 
     # exception to identify any exceptions that occur while running thru csv, and append to all errors
     except Exception as e:
@@ -175,6 +184,12 @@ def get_csv_checks(df, table):
                 errors.append(fullmsg)
         else:
             print("There are no empty columns or cells in the CSV file.")
+            # Log to the Word table
+            msg = (
+                "CSV Structure Check: No empty columns"
+                 " or cells found in the CSV file."
+            )
+            log_success(table, msg)
 
         # used to get row length input - capture no of rows in csv
         rowlength = len(df)
@@ -248,7 +263,12 @@ def get_timestamp_checks(df, table, timestamp_col):
             return
 
         print("All timestamps are valid.")
-        print(df['timestamp'])
+        # Log to the Word table
+        msg = (
+            f"Timestamp validation passed successfully." 
+            f" Sample formatted entry: {df['timestamp'].iloc[0].strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        log_success(table, msg)
 
         # format timestamp
         dttimeobj = df['timestamp'].iloc[0]
@@ -283,7 +303,7 @@ def run() -> None:
 
     table = reportdoc.add_table(rows=1, cols=1)
     table.style = "Table Grid"
-    table.rows[0].cells[0].text = "Error Description"
+    table.rows[0].cells[0].text = "Validation Status & Description"
 
     validation_pipeline = {
         "csv_checks":   get_csv_checks,
