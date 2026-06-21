@@ -5,8 +5,9 @@ import pandas as pd
 import subprocess
 import tempfile
 from vosk import Model, KaldiRecognizer
+from datetime import datetime, timedelta
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# ── Config ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 # You can run on your PC "where ffmpeg" and paste path for FFMPEG above. So if you have issue with loading it from IDE, it'll be fixed
 FFMPEG_PATH = r"ffmpeg" # default assumes ffmpeg is on PATH, otherwise specify full path to ffmpeg executable here
 BASE_DIR       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # project root
@@ -14,7 +15,8 @@ RECORDINGS_DIR = os.path.join(BASE_DIR, "data", "recordings")
 MODEL_NAME     = "vosk-model-small-en-us-0.15"  # auto-downloaded and cached by Vosk on first run
 OUTPUT_CSV     = os.path.join(BASE_DIR, "data/results", "transcriptions.csv")
 CHUNK_SIZE     = 4000
-# ─────────────────────────────────────────────────────────────────────────────
+BASE_TIMESTAMP = datetime(2026, 5, 28, 18, 0, 0)  # ← Set a BASE DATE TIME for timestamp to recording date
+# ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 def get_wav_duration_seconds(wav_path):
     """
@@ -136,12 +138,26 @@ def run(recordings_dir: str = RECORDINGS_DIR, recordings: list = None) -> "pd.Da
             # Get total speaking/audio time
             duration_seconds = get_wav_duration_seconds(tmp_wav)
 
+            # ── Generate timestamps ───────────────────────────────────────────────
+            # First file starts at BASE_TIMESTAMP
+            if len(rows) == 0:
+                current_timestamp = BASE_TIMESTAMP
+            else:
+            # Get previous row's timestamp + duration (i.e. from previous speaker)
+                previous_timestamp = datetime.strptime(
+                    rows[-1]["timestamp"], "%Y-%m-%dT%H:%M:%S"
+                )
+                previous_duration = rows[-1]["total_speaking_time_seconds"]
+                current_timestamp = previous_timestamp + timedelta(seconds=previous_duration)
+            timestamp_datetime = current_timestamp.strftime("%Y-%m-%dT%H:%M:%S")
+
             # Transcribe
             transcript = transcribe_wav(tmp_wav, model)
             print(f"    Transcript: {transcript[:80]}{'...' if len(transcript) > 80 else ''}")
 
             rows.append({
                 "filename": filename,
+                "timestamp": timestamp_datetime,
                 "speaker": speaker,
                 "index": index,
                 "transcript": transcript,
@@ -150,7 +166,7 @@ def run(recordings_dir: str = RECORDINGS_DIR, recordings: list = None) -> "pd.Da
 
     print(f"\n✅ Transcription complete. {len(rows)} row(s) ready.")
     return pd.DataFrame(rows, columns=[
-        "filename", "speaker", "index", "transcript", "total_speaking_time_seconds"
+        "filename", "timestamp", "speaker", "index", "transcript", "total_speaking_time_seconds"
     ])
 
 
