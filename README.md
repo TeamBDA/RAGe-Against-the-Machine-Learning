@@ -145,6 +145,27 @@ Space Complexity: O(N)
 Time Complexity: O(NxL) 
 Space Complexity: O(N)
 ---
+* Declan (transcriptions.py):
+* *  N =Number of audio recordings in the recordings
+* *  F=Number of audio frames in a single recording
+* * H=Number of words in the VOSK hypothesis (output) transcript
+* * B=CHUNK_SIZEFixed number of frames read at once during transcription — set to 4000 in the config.
+
+* *parse_filename:TimeO(1) as Fixed number of string splits and comparisons regardless of input size
+SpaceO(1) Only a few string variables created — no data structures
+
+* *convert_to_wav: TimeO(F) ffmpeg processes every audio frame linearly — longer recording = longer runtime
+SpaceO(1)ffmpeg streams internally; 
+
+* *get_wav_duration: TimeO(1) Reads just two integers from the WAV file header
+SpaceO(1) Only two variables stored (frames, rate)
+
+* *transcribe_wav:TimeO(F) Every audio frame is processed once in CHUNK_SIZE batches
+SpaceO(CHUNK_SIZE)Only 4000 frames held in memory at once
+
+* *compute_wer: TimeO(R × H)Every cell in the (R+1) × (H+1) edit distance matrix is filled exactly once
+SpaceO(R × H)The matrix itself must be stored in full. Created and discarded once per recording
+
 
 <h3>Key Links</h3>
 <br/>
