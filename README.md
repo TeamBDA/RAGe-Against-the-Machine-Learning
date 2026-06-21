@@ -1,30 +1,87 @@
 # BDA-Team: RAGe Against the Machine Learning
-Big Data Analytics (BDA) team project repository
+<h2>Big Data Analytics (BDA) team project repository</h2>
 
-Possible dir structure:
-<ul>
-<ol>>------Project</ol>
-<ol>&nbsp;&nbsp;>--------Models (VOSK)</ol>
-<ol>&nbsp;&nbsp;>--------Data </ol>
-<ol>&nbsp;&nbsp; >------------Recording </ol>
-<ol>&nbsp;&nbsp;>--------Transcription</ol>
-<ol>&nbsp;&nbsp;>--------Docs</ol>
-<ol>&nbsp;&nbsp;>--------Analytics</ol>
-  
-<ol>>Python files (general)</ol>
-</ul>
+<h3>A project pipeline built with the following</h3>:
 
-A project pipeline needs to be built with the following:
+* Takes in short spoken recordings (.m4a filetype) as input.
+* Transcribes the recorded speech with a Vosk audio model.
+* Corrects the transcript with Gemini 3.1 flash-lite.
+* Saves the results in a CSV dataset.
+* Enriches the transcriptions with Python, including:
+  * Question flag (whether or not the recording includes a question).
+  * Number of words spoken.
+  * Number of characters in transcripts.
+  * Speech rate.
+  * Speaker turn ID.
+* Validates the dataset before analysis.
+* Produces basic metrics for transcriptions.
 
-  <ul>
-  <li>Record short spoken statements from different team members.</li>
-    <li>Transcribe the speech with an audio model, such as Vosk.</li>
-    <li>Correct the transcript with an AI option, for example Gemini API, local Ollama, or another model.</li>
-    <li>Save the results in a CSV dataset.</li>
-    <li>Enrich your data with Python.</li>
-    <li>Validate the dataset before analysis.</li>
-    <li>Produce basic speaking analytics.</li>
-  </ul>
+---
+
+<h3>Instructions:</h3>
+This software allows you to transcribe a directory of recordings. 
+<b>Pre-Requisites:</b>
+
+ * Python (to run software)
+ * FFMPEG (for audio processing)
+ * Gemini API key (for transcription cleaning)
+ * Installed python dependencies listed in requirements.txt
+
+<b>Setup:</b>
+
+ * Install Python:  `https://www.python.org/downloads/`
+ * InstalL FFMPEG: `https://ffmpeg.org/download.html`
+ * Start virtual environment: `python -m venv .venv-RAGe`
+ * Activate virtual environment: `source .venv-RAGe/Scripts/activate`
+ * Install dependencies: `pip install -r requirements.txt`
+
+<b>To run software (from top level of repo):</b>
+
+Using defaults:
+```
+python src/main.py
+```
+
+Specifying a bespoke directory for your recordings (defaults to 'data/recordings'):
+```
+python src/main.py -d "path/to/recordings/folder"
+```
+
+Specifying a bespoke path for your ffmpeg (defaults to use $PATH for "ffmpeg"):
+```
+python src/main.py -f "path/to/your/ffmpeg.exe"
+```
+
+After running `main.py`, you will be prompted for your Gemini API key. This can be found here - `https://aistudio.google.com/api-keys`.
+
+---
+
+<h3>Time and Space Complexities</h3>
+
+* Danny (enrich_transcriptions.py):
+_N = Number of rows, L = length of row_
+ * * load_data(file_path)
+ Time Complexity: O(N x L)
+ Space Complexity: O(N x L)
+ * * add_question_flag(df)
+ Time Complexity: O(N x L)
+ Space Complexity: O(N)
+ * * add_num_words(df)
+ Time Complexity: O(N x L)
+ Space Complexity: O(N)
+ * * add_text_size_chars(df)
+ Time Complexity: O(N)
+ Space Complexity: O(N)
+ * * add_speech_rate(df)
+ Time Complexity: O(N)
+ Space Complexity: O(N)
+ * * add_speaker_turn_id(df)
+ Time Complexity: O(N)
+ Space Complexity: O(N)
+ * * save_enriched_data(df, output_file)
+ Time Complexity: O(N)
+ Space Complexity: O(1)
+---
 
 <h3>Key Links</h3>
 <br/>

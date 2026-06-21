@@ -2,3 +2,6 @@
 .DS*
 .venv*
 __pycache__/
+*.csv
+*.zip
+*.docx

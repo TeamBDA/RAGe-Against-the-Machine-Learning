@@ -10,9 +10,9 @@ def load_data(file_path):
     return pd.read_csv(file_path)
 
 def add_question_flag(df):
-    """Add a boolean column indicating if the transcript ends
-    with a question mark."""
-    df['question_flag'] = df['corrected_transcript'].str.endswith('?')
+    """Add a boolean column indicating if the transcript includes
+    a question mark."""
+    df['question_flag'] = df['corrected_transcript'].str.contains(r'\?')
     return df
 
 def add_num_words(df):
