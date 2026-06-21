@@ -155,8 +155,8 @@ See link to Project Spec: https://github.com/warestack/bda/tree/main/team-projec
 See the link to the BDA Teams form: https://forms.cloud.microsoft/pages/responsepage.aspx?id=R3_QiVjSPEaHAGNf-uyjjvXa34CVqJ9Nt0-aLae0jCxUQjhVU0RBNVpLUzhUTFVLUkRTSjVMUTRLRi4u&route=shorturl
 <br/>
 See link to Peer Review Form: https://github.com/warestack/bda/blob/main/team-project/Peer_Evaluation_Form.docx
-
-VOSK speech software: <br/><br/>
+<br/>
+VOSK speech software: <br/>
 VOSK Install: https://alphacephei.com/vosk/install
 <br/>
 VOSK model versions: https://alphacephei.com/vosk/models
