@@ -1,7 +1,7 @@
 # BDA-Team: RAGe Against the Machine Learning
 <h2>Big Data Analytics (BDA) team project repository</h2>
 
-<h3>A project pipeline built with the following</h3>:
+<h3>A project pipeline built with the following</h3>
 
 * Takes in short spoken recordings (.m4a filetype) as input.
 * Transcribes the recorded speech with a Vosk audio model.
@@ -79,6 +79,27 @@ _N = Number of rows, L = length of row_
  Time Complexity: O(N)
  Space Complexity: O(N)
  * * save_enriched_data(df, output_file)
+ Time Complexity: O(N)
+ Space Complexity: O(1)
+---
+* Kevin (vaildate_transcriptions.py):
+_N = Number of rows, L = length of row_
+ * * get_validation_msgs(success, message)
+ Time Complexity: O(N)
+ Space Complexity: O(N)
+ * *log_error(table, msg)
+ Time Complexity: O(1)
+ Space Complexity: O(1)
+ * * log_success(table, msg):
+ Time Complexity: O(1)
+ Space Complexity: O(1)
+ * *get_dtype_checks(df, table, cols_int, col_bool)
+ Time Complexity: O(NxL)
+ Space Complexity: O(N)
+ * *  get_csv_checks(df, table)
+ Time Complexity: O(N)
+ Space Complexity: O(1)
+ * * get_timestamp_checks(df, table, timestamp_col)
  Time Complexity: O(N)
  Space Complexity: O(1)
 ---
