@@ -167,13 +167,15 @@ SpaceO(CHUNK_SIZE)Only 4000 frames held in memory at once
 SpaceO(R × H)The matrix itself must be stored in full. Created and discarded once per recording
 ---
 Anika (correct_transcription.py):
-N = Number of rows
- * * correct_text(client, raw_text) 
- Time Complexity: O(1)
- Space Complexity: O(1)
- * * run(df, api_key)
- Time Complexity: O(N)
- Space Complexity: O(N)
+N = Number of rows, L = Length of transcript string
+
+* correct_text(client, raw_text)
+  Time Complexity: O(1) per call
+  Space Complexity: O(1)
+
+* run(df, api_key)
+  Time Complexity: O(N x L) - the loop runs once per row (O(N)). API latency scales with transcript length (L). For standard short transcripts it's O(N).
+  Space Complexity: O(N x L) - total memory depends on both the number of rows and the character count stored in each row.
 
 <h3>Key Links</h3>
 <br/>
