@@ -138,21 +138,21 @@ def get_dtype_checks(df, table, cols_int, col_bool):
                 errors.append(log_error(table, msg))
                 continue
 
-            if errors:
-                #log any errors
-                log_error(table, "[VALIDATION FAILED] Data type validation failed.")
+        if errors:
+            #log any errors
+            log_error(table, "[VALIDATION FAILED] Data type validation failed.")
 
-            else:
-                # Return validation correct of all intended data met the data types
-                # requirements in file
-                print("\n[VALIDATION SUCCESS] Data validation passed.")
+        else:
+            # Return validation correct of all intended data met the data types
+            # requirements in file
+            print("\n[VALIDATION SUCCESS] Data validation passed.")
 
-                # Log to the Word table
-                msg = (
-                    "Data type validation passed successfully"
-                     " (Numeric and Boolean types are valid)."
-                )
-                log_success(table, msg)
+            # Log to the Word table
+            msg = (
+                "Data type validation passed successfully"
+                    " (Numeric and Boolean types are valid)."
+            )
+            log_success(table, msg)
 
     # exception to identify any exceptions that occur while running thru csv, and append to all errors
     except Exception as e:
@@ -168,7 +168,8 @@ def get_csv_checks(df, table):
 
     try:
         # apply a lambda (once-off) function to apply mapping to strip extra spaces in csv columns that may exist
-        df = df.apply(
+        # [:] Modifies in-place without needing to reassign df in memory
+        df[:] = df.apply(
             lambda col: col.map(lambda x: x.strip() if isinstance(x, str) else x)
         )
 

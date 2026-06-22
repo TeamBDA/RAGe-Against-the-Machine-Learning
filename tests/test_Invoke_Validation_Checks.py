@@ -4,7 +4,7 @@ import pytest
 import pandas as pd
 from io import StringIO
 from docx import Document
-import Invoke_Validation_Checks as ivc
+import src.validate_transcriptions as ivc
 
 # Helper: create a dummy Word table for logging
 def make_table():
