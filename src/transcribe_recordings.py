@@ -1,38 +1,31 @@
 import os
 import wave
 import json
-import csv
+import pandas as pd
 import subprocess
 import tempfile
+from datetime import datetime, timedelta
 from vosk import Model, KaldiRecognizer
 
 # ── Config ────────────────────────────────────────────────────────────────────
+# You can run on your PC "where ffmpeg" and paste path for FFMPEG above. So if you have issue with loading it from IDE, it'll be fixed
+FFMPEG_PATH = r"ffmpeg" # default assumes ffmpeg is on PATH, otherwise specify full path to ffmpeg executable here
 BASE_DIR       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # project root
 RECORDINGS_DIR = os.path.join(BASE_DIR, "data", "recordings")
 MODEL_NAME     = "vosk-model-small-en-us-0.15"  # auto-downloaded and cached by Vosk on first run
-OUTPUT_CSV     = os.path.join(BASE_DIR, "data", "transcriptions.csv")
+OUTPUT_CSV     = os.path.join(BASE_DIR, "data/results", "transcriptions.csv")
+BASE_TIMESTAMP  = datetime(2026, 6, 18, 18, 0, 0) 
 CHUNK_SIZE     = 4000
 # ─────────────────────────────────────────────────────────────────────────────
 
-
-def check_ffmpeg():
+def get_wav_duration_seconds(wav_path):
     """
-    Validates that ffmpeg is installed and accessible on PATH.
-    Exits early with a clear message if it is not found, rather than
-    letting the code fail silently later during conversion.
+        Get duration of wav file.
     """
-    result = subprocess.run(
-        ["ffmpeg", "-version"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
-    if result.returncode != 0:
-        raise EnvironmentError(
-            "ffmpeg was not found on your PATH.\n"
-            "Please install it and ensure it is accessible before running this script.\n"
-            "See the README for installation instructions."
-        )
-
+    with wave.open(wav_path, "rb") as wf:
+        frames = wf.getnframes()
+        rate = wf.getframerate()
+        return round(frames / float(rate), 2)
 
 def parse_filename(filename):
     """
@@ -48,11 +41,11 @@ def parse_filename(filename):
             break
         base = root
 
-    # Expected format: RATML-{SPEAKER}-VN{N}
+    # Expected format: VN{N}-RATML-{SPEAKER}
     parts = base.split("-")
-    if len(parts) == 3 and parts[0] == "RATML" and parts[2].startswith("VN"):
-        speaker = parts[1]
-        index = parts[2]          # e.g. "VN1"
+    if len(parts) == 3 and parts[1] == "RATML" and parts[0].startswith("VN"):
+        speaker = parts[2]
+        index = parts[0]          # e.g. "VN1"
         return speaker, index
 
     return None, None
@@ -61,7 +54,7 @@ def parse_filename(filename):
 def convert_to_wav(m4a_path, tmp_wav_path):
     """Converts m4a to 16kHz mono 16-bit WAV using ffmpeg."""
     cmd = [
-        "ffmpeg", "-y",             # overwrite output if exists
+        FFMPEG_PATH, "-y",             # overwrite output if exists
         "-i", m4a_path,
         "-ar", "16000",             # sample rate
         "-ac", "1",                 # mono
@@ -99,26 +92,28 @@ def transcribe_wav(wav_path, model):
     return " ".join(parts).strip()
 
 
-def main():
-    # Fail fast if ffmpeg is missing before we do any real work
-    check_ffmpeg()
+def run(recordings_dir: str = RECORDINGS_DIR, recordings: list = None) -> "pd.DataFrame":
+    """
+    Pipeline entry point. Transcribes all recordings and returns results
+    as a DataFrame for the next pipeline step.
+    """
+
+    if not recordings:
+        raise FileNotFoundError(
+            f"No .m4a recordings found in directory: {recordings_dir}\n"
+            "Please ensure you have recordings to transcribe."
+        )
 
     print(f"Loading VOSK model: {MODEL_NAME}")
     model = Model(model_name=MODEL_NAME)
 
-    # Collect all m4a files
-    all_files = sorted([
-        f for f in os.listdir(RECORDINGS_DIR)
-        if ".m4a" in f.lower()
-    ])
-
-    print(f"Found {len(all_files)} recording(s). Starting transcription...\n")
+    print(f"Found {len(recordings)} recording(s). Starting transcription...\n")
 
     rows = []
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        for filename in all_files:
-            m4a_path = os.path.join(RECORDINGS_DIR, filename)
+        for filename in recordings:
+            m4a_path = os.path.join(recordings_dir, filename)
             speaker, index = parse_filename(filename)
 
             if not speaker:
@@ -132,33 +127,63 @@ def main():
             if not convert_to_wav(m4a_path, tmp_wav):
                 print(f"    [ERROR] ffmpeg conversion failed for {filename}")
                 rows.append({
-                    "filename":   filename,
-                    "speaker":    speaker,
-                    "index":      index,
-                    "transcript": "ERROR: conversion failed"
+                    "filename": filename,
+                    "speaker": speaker,
+                    "index": index,
+                    "transcript": "ERROR: conversion failed",
+                    "total_speaking_time_seconds": 0
                 })
                 continue
+
+            # Get total speaking/audio time
+            duration_seconds = get_wav_duration_seconds(tmp_wav)
 
             # Transcribe
             transcript = transcribe_wav(tmp_wav, model)
             print(f"    Transcript: {transcript[:80]}{'...' if len(transcript) > 80 else ''}")
-
+            
             rows.append({
-                "filename":   filename,
-                "speaker":    speaker,
-                "index":      index,
-                "transcript": transcript
+                "filename": filename,
+                "speaker": speaker,
+                "index": index,
+                "transcript": transcript,
+                "timestamp": "",
+                "total_speaking_time_seconds": duration_seconds
             })
+
+            # Generate timestamps
+            # The first row (index=1) receives BASE_TIMESTAMP.                           new timestamp generation block
+            # Each subsequent row's timestamp = previous timestamp + that row's
+            # time_taken_sec, representing when that speaker began talking relative
+            # to the start of the meeting.
+            current_timestamp = BASE_TIMESTAMP                                           
+            for row in rows:                                                             
+                row["timestamp"] = current_timestamp.strftime("%Y-%m-%dT%H:%M:%S")     #format as ISO 8601
+                if isinstance(row["total_speaking_time_seconds"], float):                             
+                    current_timestamp += timedelta(seconds=row["total_speaking_time_seconds"]) 
+
+    print(f"\n✅ Transcription complete. {len(rows)} row(s) ready.")
+    return pd.DataFrame(rows, columns=[
+        "filename", "speaker", "index", "transcript", "timestamp", "total_speaking_time_seconds"
+    ])
+
+
+def main():
+    """Standalone entry point — transcribes and writes CSV as before."""
+    # Collect all m4a files
+    recordings = sorted([
+        f for f in os.listdir(RECORDINGS_DIR)
+        if ".m4a" in f.lower()
+    ])
+
+    df = run(recordings=recordings)
 
     # Write CSV
     os.makedirs(os.path.dirname(OUTPUT_CSV), exist_ok=True)
-    with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["filename", "speaker", "index", "transcript"])
-        writer.writeheader()
-        writer.writerows(rows)
+    df.to_csv(OUTPUT_CSV, index=False, encoding="utf-8")
 
     print(f"\n✅ Done! CSV saved to: {OUTPUT_CSV}")
-    print(f"   {len(rows)} row(s) written.")
+    print(f"   {len(df)} row(s) written.")
 
 
 if __name__ == "__main__":
