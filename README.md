@@ -165,7 +165,15 @@ SpaceO(CHUNK_SIZE)Only 4000 frames held in memory at once
 
 * *compute_wer: TimeO(R × H)Every cell in the (R+1) × (H+1) edit distance matrix is filled exactly once
 SpaceO(R × H)The matrix itself must be stored in full. Created and discarded once per recording
-
+---
+Anika (correct_transcription.py):
+N = Number of rows
+ * * correct_text(client, raw_text) 
+ Time Complexity: O(1)
+ Space Complexity: O(1)
+ * * run(df, api_key)
+ Time Complexity: O(N)
+ Space Complexity: O(N)
 
 <h3>Key Links</h3>
 <br/>
