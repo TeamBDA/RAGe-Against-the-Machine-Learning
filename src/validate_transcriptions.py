@@ -106,6 +106,14 @@ def get_dtype_checks(df, table, cols_int, col_bool):
                 msg = f"Invalid numeric value '{val}' at column {col} and row {idx + 2}"
                 fullmsg = log_error(table, msg)             
                 errors.append(fullmsg)
+        
+        else:
+        # Log to the Word table - adding to ensure that success is logged if all data types match intended
+            msg = (
+                "Data type validation passed successfully"
+                " (Numeric and Boolean types are valid)."
+            )
+            log_success(table, msg)
 
         # Vectorised boolean validation for the expected boolean column, 
         # but only if the column is present in the file, otherwise log an 
@@ -260,20 +268,20 @@ def get_timestamp_checks(df, table, timestamp_col):
                 msg = f"Timestamp validation failed at row {idx + 2}."
                 fullmsg = log_error(table, msg)             
                 errors.append(fullmsg)
-            return
 
-        print("All timestamps are valid.")
-        # Log to the Word table
-        msg = (
+        else:
+         print("All timestamps are valid.")
+            # Log to the Word table
+         msg = (
             f"Timestamp validation passed successfully." 
             f" Sample formatted entry: {df['timestamp'].iloc[0].strftime('%Y-%m-%d %H:%M:%S')}"
-        )
-        log_success(table, msg)
+         )
+         log_success(table, msg)
 
-        # format timestamp
-        dttimeobj = df['timestamp'].iloc[0]
-        formatted = dttimeobj.strftime('%Y-%m-%d %H:%M:%S')
-        print(f"Timestamp value {formatted}")
+         # format timestamp
+         dttimeobj = df['timestamp'].iloc[0]
+         formatted = dttimeobj.strftime('%Y-%m-%d %H:%M:%S')
+         print(f"Timestamp value {formatted}")
 
     #validate if the file is empty
     except pd.errors.EmptyDataError:
@@ -285,6 +293,8 @@ def get_timestamp_checks(df, table, timestamp_col):
         msg = f"Timestamp validation error: {str(e)}"
         fullmsg = log_error(table, msg)             
         errors.append(fullmsg)
+
+    return errors
 
 # ── Use for testing validation/error handling functions───────────────────────────────
 def run() -> None:
