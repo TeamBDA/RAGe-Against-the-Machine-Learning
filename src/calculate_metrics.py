@@ -47,7 +47,7 @@ def total_words_num(data):
         speaker = row['speaker']
 
         # Split once
-        word_count = len(row['transcript'].split())
+        word_count = len(row['corrected_transcript'].split())
 
         # Directly access dictionary
         stats[speaker] = stats.get(speaker, 0) + word_count
@@ -68,19 +68,19 @@ def ml_speaker_rec(data, mode):
 
         # Temporary length(temp_rec_len) == 0 -> in case when just function starting first time and temporary length == 0, so we save first value
         if temp_rec_len == 0:
-            temp_rec_len = len(row['transcript'].split())
+            temp_rec_len = len(row['corrected_transcript'].split())
             temp_speaker = row['speaker']
 
-        # If temp_rec_len < len(row['transcript'].split()) -> checking if temporary length which was saved in the previous step < than current one
+        # If temp_rec_len < len(row['corrected_transcript'].split()) -> checking if temporary length which was saved in the previous step < than current one
         # If it's true -> we have a speaker with new highest amount of words per recording, so we need to save it in our stats dictionary
-        if mode == "most" and temp_rec_len < len(row['transcript'].split()):
-            temp_rec_len = len(row['transcript'].split())
+        if mode == "most" and temp_rec_len < len(row['corrected_transcript'].split()):
+            temp_rec_len = len(row['corrected_transcript'].split())
             temp_speaker = row['speaker']
 
-        # If temp_rec_len > len(row['transcript'].split()) -> checking if temporary length which was saved in the previous step > than current one
+        # If temp_rec_len > len(row['corrected_transcript'].split()) -> checking if temporary length which was saved in the previous step > than current one
         # If it's true -> we have a speaker with new lowest amount of words per recording, so we need to save it in our stats dictionary
-        elif mode == "least" and temp_rec_len > len(row['transcript'].split()):
-            temp_rec_len = len(row['transcript'].split())
+        elif mode == "least" and temp_rec_len > len(row['corrected_transcript'].split()):
+            temp_rec_len = len(row['corrected_transcript'].split())
             temp_speaker = row['speaker']
 
     # If temp_speaker not empty -> populate stats from temporary variables(name and amount of words)
