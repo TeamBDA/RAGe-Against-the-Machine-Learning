@@ -4,6 +4,7 @@ import json
 import pandas as pd
 import subprocess
 import tempfile
+from datetime import datetime, timedelta
 from vosk import Model, KaldiRecognizer
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -13,6 +14,7 @@ BASE_DIR       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 
 RECORDINGS_DIR = os.path.join(BASE_DIR, "data", "recordings")
 MODEL_NAME     = "vosk-model-small-en-us-0.15"  # auto-downloaded and cached by Vosk on first run
 OUTPUT_CSV     = os.path.join(BASE_DIR, "data/results", "transcriptions.csv")
+BASE_TIMESTAMP  = datetime(2026, 6, 18, 18, 0, 0) 
 CHUNK_SIZE     = 4000
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -139,24 +141,42 @@ def run(recordings_dir: str = RECORDINGS_DIR, recordings: list = None) -> "pd.Da
             # Transcribe
             transcript = transcribe_wav(tmp_wav, model)
             print(f"    Transcript: {transcript[:80]}{'...' if len(transcript) > 80 else ''}")
-
+            
             rows.append({
                 "filename": filename,
                 "speaker": speaker,
                 "index": index,
                 "transcript": transcript,
+                "timestamp": "",
                 "total_speaking_time_seconds": duration_seconds
             })
 
+            # Generate timestamps
+            # The first row (index=1) receives BASE_TIMESTAMP.                           new timestamp generation block
+            # Each subsequent row's timestamp = previous timestamp + that row's
+            # time_taken_sec, representing when that speaker began talking relative
+            # to the start of the meeting.
+            current_timestamp = BASE_TIMESTAMP                                           
+            for row in rows:                                                             
+                row["timestamp"] = current_timestamp.strftime("%Y-%m-%dT%H:%M:%S")     #format as ISO 8601
+                if isinstance(row["total_speaking_time_seconds"], float):                             
+                    current_timestamp += timedelta(seconds=row["total_speaking_time_seconds"]) 
+
     print(f"\n✅ Transcription complete. {len(rows)} row(s) ready.")
     return pd.DataFrame(rows, columns=[
-        "filename", "speaker", "index", "transcript", "total_speaking_time_seconds"
+        "filename", "speaker", "index", "transcript", "timestamp", "total_speaking_time_seconds"
     ])
 
 
 def main():
     """Standalone entry point — transcribes and writes CSV as before."""
-    df = run()
+    # Collect all m4a files
+    recordings = sorted([
+        f for f in os.listdir(RECORDINGS_DIR)
+        if ".m4a" in f.lower()
+    ])
+
+    df = run(recordings=recordings)
 
     # Write CSV
     os.makedirs(os.path.dirname(OUTPUT_CSV), exist_ok=True)
